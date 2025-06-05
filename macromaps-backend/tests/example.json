@@ -1,0 +1,11 @@
+{
+  "test_coordinates": {
+    "latitude": 14.5851,
+    "longitude": 121.056,
+    "location_description": "Times Square, New York City"
+  },
+  "success": false,
+  "error": "Failed to start data extraction: {\n  \"error\": {\n    \"type\": \"page-not-found\",\n    \"message\": \"We have bad news: there is no API endpoint at this URL. Did you specify it correctly?\"\n  }\n}",
+  "restaurant_count": 0,
+  "restaurants": null
+}
