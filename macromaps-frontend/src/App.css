@@ -908,16 +908,16 @@ body {
 /* Customize popup styles */
 .restaurant-map .leaflet-popup-content-wrapper {
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid #d1d5db;
-  background-color: #ffffff;
-  color: #374151;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  border: 1px solid #374151;
+  background-color: #1f2937;
+  color: #f9fafb;
 }
 
 .restaurant-map .leaflet-popup-tip {
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* Custom Modern Marker Styles */

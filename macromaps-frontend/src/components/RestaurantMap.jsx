@@ -16,9 +16,9 @@ L.Icon.Default.mergeOptions({
 const createRankingIcon = (ranking) => {
     const svgString = `
         <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#3b82f6"/>
-            <circle cx="16" cy="16" r="10" fill="white"/>
-            <text x="16" y="20" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#3b82f6">${ranking}</text>
+            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#1f2937"/>
+            <circle cx="16" cy="16" r="10" fill="#3b82f6"/>
+            <text x="16" y="21" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">${ranking}</text>
         </svg>
     `;
 
@@ -367,6 +367,7 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         sortedRestaurants.forEach((restaurant, index) => {
             rankings.set(restaurant.name, index + 1);
         });
+
         return rankings;
     }, [sortedRestaurants]);
 
@@ -374,13 +375,13 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     const menuItemRestaurantRankings = useMemo(() => {
         if (viewMode !== 'menu_items') return new Map();
 
-        const rankings = new Map();
         const restaurantBestRankings = new Map();
 
         // Find the best (lowest index = highest ranking) menu item for each restaurant
         sortedMenuItems.forEach((item, index) => {
-            if (!restaurantBestRankings.has(item.restaurantName)) {
-                restaurantBestRankings.set(item.restaurantName, index + 1);
+            const restaurantName = item.restaurantName;
+            if (!restaurantBestRankings.has(restaurantName)) {
+                restaurantBestRankings.set(restaurantName, index + 1);
             }
         });
 
@@ -875,7 +876,7 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                         if (viewMode === 'restaurants') {
                                             // For restaurant view, use restaurant ranking
                                             const ranking = restaurantRankings.get(restaurant.name);
-                                            markerIcon = createRankingIcon(ranking);
+                                            markerIcon = ranking ? createRankingIcon(ranking) : restaurantIcon;
                                         } else {
                                             // For menu items view, use the ranking of the highest ranking menu item
                                             const ranking = menuItemRestaurantRankings.get(restaurant.name);
@@ -887,7 +888,7 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
 
                                     return (
                                         <Marker
-                                            key={index}
+                                            key={`${index}-${shouldShowRankings}-${viewMode}-${sortField}-${sortDirection}`}
                                             position={[restaurant.location.lat, restaurant.location.lng]}
                                             icon={markerIcon}
                                         >
@@ -944,9 +945,9 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                 <div className="legend-icon restaurant-legend-icon">
                                     {shouldShowRankings ? (
                                         <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#3b82f6" />
-                                            <circle cx="16" cy="16" r="10" fill="white" />
-                                            <text x="16" y="20" fontFamily="Arial, sans-serif" fontSize="8" fontWeight="bold" textAnchor="middle" fill="#3b82f6">#</text>
+                                            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#1f2937" />
+                                            <circle cx="16" cy="16" r="10" fill="#3b82f6" />
+                                            <text x="16" y="21" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="bold" textAnchor="middle" fill="white">#</text>
                                         </svg>
                                     ) : (
                                         <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
