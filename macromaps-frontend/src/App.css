@@ -879,9 +879,6 @@ body {
   font-family: inherit;
 }
 
-.restaurant-map .leaflet-tile {
-  /* No special filters needed for light theme */
-}
 
 /* Customize zoom controls */
 .restaurant-map .leaflet-control-zoom {
