@@ -12,6 +12,25 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Create ranking icon with number
+const createRankingIcon = (ranking) => {
+    const svgString = `
+        <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#3b82f6"/>
+            <circle cx="16" cy="16" r="10" fill="white"/>
+            <text x="16" y="20" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#3b82f6">${ranking}</text>
+        </svg>
+    `;
+
+    return new L.DivIcon({
+        html: svgString,
+        className: 'custom-ranking-marker',
+        iconSize: [32, 40],
+        iconAnchor: [16, 40],
+        popupAnchor: [0, -40]
+    });
+};
+
 // Create modern restaurant icon
 const createRestaurantIcon = () => {
     const svgString = `
@@ -336,6 +355,37 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         ];
         return L.latLngBounds(allLocations.map(loc => [loc.lat, loc.lng]));
     }, [restaurants, restaurantsWithDistance, userLocation]);
+
+    // Determine if we should show rankings (when sorted by anything other than distance)
+    const shouldShowRankings = useMemo(() => {
+        return sortField !== 'distance';
+    }, [sortField]);
+
+    // Calculate restaurant rankings for restaurant view
+    const restaurantRankings = useMemo(() => {
+        const rankings = new Map();
+        sortedRestaurants.forEach((restaurant, index) => {
+            rankings.set(restaurant.name, index + 1);
+        });
+        return rankings;
+    }, [sortedRestaurants]);
+
+    // Calculate restaurant rankings for menu items view (based on highest ranking menu item)
+    const menuItemRestaurantRankings = useMemo(() => {
+        if (viewMode !== 'menu_items') return new Map();
+
+        const rankings = new Map();
+        const restaurantBestRankings = new Map();
+
+        // Find the best (lowest index = highest ranking) menu item for each restaurant
+        sortedMenuItems.forEach((item, index) => {
+            if (!restaurantBestRankings.has(item.restaurantName)) {
+                restaurantBestRankings.set(item.restaurantName, index + 1);
+            }
+        });
+
+        return restaurantBestRankings;
+    }, [sortedMenuItems, viewMode]);
 
     // Early return after all hooks are declared
     if (!restaurants || restaurants.length === 0) {
@@ -818,45 +868,63 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                 </Marker>
 
                                 {/* Restaurant markers */}
-                                {sortedRestaurants.map((restaurant, index) => (
-                                    <Marker
-                                        key={index}
-                                        position={[restaurant.location.lat, restaurant.location.lng]}
-                                        icon={restaurantIcon}
-                                    >
-                                        <Popup>
-                                            <div className="popup-content">
-                                                <h3>{restaurant.name}</h3>
-                                                <p className="restaurant-category">{restaurant.category}</p>
-                                                <p className="restaurant-rating">
-                                                    {formatRating(restaurant.rating)}
-                                                    {restaurant.reviewsCount > 0 && ` (${restaurant.reviewsCount} reviews)`}
-                                                    {restaurant.priceLevel && ` • ${restaurant.priceLevel}`}
-                                                </p>
-                                                <p className="restaurant-distance">📍 {formatDistance(restaurant.distance)} away</p>
-                                                <p className="menu-items-count">🍽️ {restaurant.menuItems?.length || 0} menu items</p>
-                                                <p className="restaurant-address">{restaurant.address}</p>
-                                                {restaurant.phone && (
-                                                    <p className="restaurant-phone">📞 {restaurant.phone}</p>
-                                                )}
-                                                {restaurant.website && (
-                                                    <p className="restaurant-website">
-                                                        <a href={restaurant.website} target="_blank" rel="noopener noreferrer">
-                                                            🌐 Visit Website
-                                                        </a>
+                                {sortedRestaurants.map((restaurant, index) => {
+                                    // Determine which icon to use
+                                    let markerIcon;
+                                    if (shouldShowRankings) {
+                                        if (viewMode === 'restaurants') {
+                                            // For restaurant view, use restaurant ranking
+                                            const ranking = restaurantRankings.get(restaurant.name);
+                                            markerIcon = createRankingIcon(ranking);
+                                        } else {
+                                            // For menu items view, use the ranking of the highest ranking menu item
+                                            const ranking = menuItemRestaurantRankings.get(restaurant.name);
+                                            markerIcon = ranking ? createRankingIcon(ranking) : restaurantIcon;
+                                        }
+                                    } else {
+                                        markerIcon = restaurantIcon;
+                                    }
+
+                                    return (
+                                        <Marker
+                                            key={index}
+                                            position={[restaurant.location.lat, restaurant.location.lng]}
+                                            icon={markerIcon}
+                                        >
+                                            <Popup>
+                                                <div className="popup-content">
+                                                    <h3>{restaurant.name}</h3>
+                                                    <p className="restaurant-category">{restaurant.category}</p>
+                                                    <p className="restaurant-rating">
+                                                        {formatRating(restaurant.rating)}
+                                                        {restaurant.reviewsCount > 0 && ` (${restaurant.reviewsCount} reviews)`}
+                                                        {restaurant.priceLevel && ` • ${restaurant.priceLevel}`}
                                                     </p>
-                                                )}
-                                                {restaurant.url && (
-                                                    <p className="restaurant-maps">
-                                                        <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
-                                                            📍 View on Google Maps
-                                                        </a>
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </Popup>
-                                    </Marker>
-                                ))}
+                                                    <p className="restaurant-distance">📍 {formatDistance(restaurant.distance)} away</p>
+                                                    <p className="menu-items-count">🍽️ {restaurant.menuItems?.length || 0} menu items</p>
+                                                    <p className="restaurant-address">{restaurant.address}</p>
+                                                    {restaurant.phone && (
+                                                        <p className="restaurant-phone">📞 {restaurant.phone}</p>
+                                                    )}
+                                                    {restaurant.website && (
+                                                        <p className="restaurant-website">
+                                                            <a href={restaurant.website} target="_blank" rel="noopener noreferrer">
+                                                                🌐 Visit Website
+                                                            </a>
+                                                        </p>
+                                                    )}
+                                                    {restaurant.url && (
+                                                        <p className="restaurant-maps">
+                                                            <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
+                                                                📍 View on Google Maps
+                                                            </a>
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    );
+                                })}
                             </MapContainer>
                         )}
 
@@ -874,14 +942,29 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                             </div>
                             <div className="legend-item">
                                 <div className="legend-icon restaurant-legend-icon">
-                                    <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#22c55e" />
-                                        <circle cx="16" cy="16" r="10" fill="white" />
-                                        <path d="M20 12H12C11.45 12 11 12.45 11 13V19C11 19.55 11.45 20 12 20H20C20.55 20 21 19.55 21 19V13C21 12.45 20.55 12 20 12ZM19 18H13V14H19V18Z" fill="#22c55e" />
-                                        <path d="M16 9C17.1 9 18 9.9 18 11V12H14V11C14 9.9 14.9 9 16 9Z" fill="#22c55e" />
-                                    </svg>
+                                    {shouldShowRankings ? (
+                                        <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#3b82f6" />
+                                            <circle cx="16" cy="16" r="10" fill="white" />
+                                            <text x="16" y="20" fontFamily="Arial, sans-serif" fontSize="8" fontWeight="bold" textAnchor="middle" fill="#3b82f6">#</text>
+                                        </svg>
+                                    ) : (
+                                        <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#22c55e" />
+                                            <circle cx="16" cy="16" r="10" fill="white" />
+                                            <path d="M20 12H12C11.45 12 11 12.45 11 13V19C11 19.55 11.45 20 12 20H20C20.55 20 21 19.55 21 19V13C21 12.45 20.55 12 20 12ZM19 18H13V14H19V18Z" fill="#22c55e" />
+                                            <path d="M16 9C17.1 9 18 9.9 18 11V12H14V11C14 9.9 14.9 9 16 9Z" fill="#22c55e" />
+                                        </svg>
+                                    )}
                                 </div>
-                                <span>Restaurants</span>
+                                <span>
+                                    {shouldShowRankings
+                                        ? (viewMode === 'restaurants'
+                                            ? 'Restaurant Rankings'
+                                            : 'Menu Item Rankings')
+                                        : 'Restaurants'
+                                    }
+                                </span>
                             </div>
                         </div>
                     </div>
