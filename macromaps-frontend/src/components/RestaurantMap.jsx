@@ -97,6 +97,9 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     const [ratioDenominator, setRatioDenominator] = useState('price');
     const [isExpanded, setIsExpanded] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [showMobileDropdown, setShowMobileDropdown] = useState(false);
+    const [showRatioNumeratorDropdown, setShowRatioNumeratorDropdown] = useState(false);
+    const [showRatioDenominatorDropdown, setShowRatioDenominatorDropdown] = useState(false);
 
     // Touch handling refs
     const touchStartY = useRef(0);
@@ -115,9 +118,35 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         return () => window.removeEventListener('resize', checkIsMobile);
     }, []);
 
+    // Close mobile dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.mobile-dropdown-container')) {
+                setShowMobileDropdown(false);
+                setShowRatioNumeratorDropdown(false);
+                setShowRatioDenominatorDropdown(false);
+            }
+        };
+
+        document.addEventListener('touchstart', handleClickOutside);
+        document.addEventListener('click', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('touchstart', handleClickOutside);
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, []);
+
     // Handle touch events for sliding panel
     const handleTouchStart = (e) => {
         if (!isMobile) return;
+
+        // Ignore touches on interactive elements
+        const target = e.target;
+        if (target.tagName === 'SELECT' || target.tagName === 'BUTTON' || target.tagName === 'INPUT' ||
+            target.closest('.sort-controls') || target.closest('.view-toggle') || target.closest('.ratio-config')) {
+            return;
+        }
 
         touchStartY.current = e.touches[0].clientY;
         touchStartTime.current = Date.now();
@@ -125,6 +154,13 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
 
     const handleTouchMove = (e) => {
         if (!isMobile) return;
+
+        // Ignore touches on interactive elements
+        const target = e.target;
+        if (target.tagName === 'SELECT' || target.tagName === 'BUTTON' || target.tagName === 'INPUT' ||
+            target.closest('.sort-controls') || target.closest('.view-toggle') || target.closest('.ratio-config')) {
+            return;
+        }
 
         // Don't call preventDefault as it conflicts with passive listeners
         // Instead, we'll use CSS touch-action to control scrolling behavior
@@ -137,6 +173,13 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
 
     const handleTouchEnd = (e) => {
         if (!isMobile) return;
+
+        // Ignore touches on interactive elements
+        const target = e.changedTouches[0].target || e.target;
+        if (target.tagName === 'SELECT' || target.tagName === 'BUTTON' || target.tagName === 'INPUT' ||
+            target.closest('.sort-controls') || target.closest('.view-toggle') || target.closest('.ratio-config')) {
+            return;
+        }
 
         const touchEndY = e.changedTouches[0].clientY;
         const deltaY = touchStartY.current - touchEndY;
@@ -160,7 +203,14 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     };
 
     // Handle click on sidebar header (for desktop and as fallback)
-    const handleSidebarHeaderClick = () => {
+    const handleSidebarHeaderClick = (e) => {
+        // Don't toggle if clicking on interactive elements
+        const target = e.target;
+        if (target.tagName === 'SELECT' || target.tagName === 'BUTTON' || target.tagName === 'INPUT' ||
+            target.closest('.sort-controls') || target.closest('.view-toggle') || target.closest('.ratio-config')) {
+            return;
+        }
+
         if (isMobile) {
             setIsExpanded(!isExpanded);
         }
@@ -458,6 +508,163 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         </div>
     );
 
+    // Mobile dropdown options
+    const getMobileDropdownOptions = () => {
+        if (viewMode === 'restaurants') {
+            return [
+                { value: 'distance', label: 'Distance' },
+                { value: 'rating', label: 'Rating' },
+                { value: 'name', label: 'Name' },
+                { value: 'priceLevel', label: 'Price' }
+            ];
+        } else {
+            return [
+                { value: 'calories', label: 'Calories' },
+                { value: 'protein', label: 'Protein' },
+                { value: 'price', label: 'Price' },
+                { value: 'distance', label: 'Distance' },
+                { value: 'ratio', label: '📊 Ratio' }
+            ];
+        }
+    };
+
+    const handleMobileDropdownSelect = (value) => {
+        handleSort(value);
+        setShowMobileDropdown(false);
+    };
+
+    // Custom mobile dropdown component
+    const MobileDropdown = () => {
+        const options = getMobileDropdownOptions();
+        const currentOption = options.find(opt => opt.value === sortField);
+
+        return (
+            <div className="mobile-dropdown-container">
+                <button
+                    className="mobile-dropdown-trigger"
+                    onClick={() => setShowMobileDropdown(!showMobileDropdown)}
+                    type="button"
+                >
+                    <span>{currentOption?.label || 'Sort'}</span>
+                    <ChevronDown size={16} className={`dropdown-arrow ${showMobileDropdown ? 'rotated' : ''}`} />
+                </button>
+
+                {showMobileDropdown && (
+                    <div className="mobile-dropdown-menu">
+                        {options.map((option) => (
+                            <button
+                                key={option.value}
+                                className={`mobile-dropdown-option ${sortField === option.value ? 'active' : ''}`}
+                                onClick={() => handleMobileDropdownSelect(option.value)}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Ratio dropdown options
+    const getRatioNumeratorOptions = () => [
+        { value: 'protein', label: 'Protein (g)' },
+        { value: 'calories', label: 'Calories' },
+        { value: 'carbs', label: 'Carbs (g)' },
+        { value: 'fat', label: 'Fat (g)' }
+    ];
+
+    const getRatioDenominatorOptions = () => [
+        { value: 'price', label: 'Price ($)' },
+        { value: 'calories', label: 'Calories' },
+        { value: 'protein', label: 'Protein (g)' },
+        { value: 'carbs', label: 'Carbs (g)' },
+        { value: 'fat', label: 'Fat (g)' }
+    ];
+
+    // Custom mobile dropdown component for ratio numerator
+    const RatioNumeratorMobileDropdown = () => {
+        const options = getRatioNumeratorOptions();
+        const currentOption = options.find(opt => opt.value === ratioNumerator);
+
+        return (
+            <div className="mobile-dropdown-container">
+                <button
+                    className="mobile-dropdown-trigger ratio-dropdown"
+                    onClick={() => {
+                        setShowRatioNumeratorDropdown(!showRatioNumeratorDropdown);
+                        setShowRatioDenominatorDropdown(false);
+                        setShowMobileDropdown(false);
+                    }}
+                    type="button"
+                >
+                    <span>{currentOption?.label || 'Select'}</span>
+                    <ChevronDown size={16} className={`dropdown-arrow ${showRatioNumeratorDropdown ? 'rotated' : ''}`} />
+                </button>
+
+                {showRatioNumeratorDropdown && (
+                    <div className="mobile-dropdown-menu">
+                        {options.map((option) => (
+                            <button
+                                key={option.value}
+                                className={`mobile-dropdown-option ${ratioNumerator === option.value ? 'active' : ''}`}
+                                onClick={() => {
+                                    setRatioNumerator(option.value);
+                                    setShowRatioNumeratorDropdown(false);
+                                }}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Custom mobile dropdown component for ratio denominator
+    const RatioDenominatorMobileDropdown = () => {
+        const options = getRatioDenominatorOptions();
+        const currentOption = options.find(opt => opt.value === ratioDenominator);
+
+        return (
+            <div className="mobile-dropdown-container">
+                <button
+                    className="mobile-dropdown-trigger ratio-dropdown"
+                    onClick={() => {
+                        setShowRatioDenominatorDropdown(!showRatioDenominatorDropdown);
+                        setShowRatioNumeratorDropdown(false);
+                        setShowMobileDropdown(false);
+                    }}
+                    type="button"
+                >
+                    <span>{currentOption?.label || 'Select'}</span>
+                    <ChevronDown size={16} className={`dropdown-arrow ${showRatioDenominatorDropdown ? 'rotated' : ''}`} />
+                </button>
+
+                {showRatioDenominatorDropdown && (
+                    <div className="mobile-dropdown-menu">
+                        {options.map((option) => (
+                            <button
+                                key={option.value}
+                                className={`mobile-dropdown-option ${ratioDenominator === option.value ? 'active' : ''}`}
+                                onClick={() => {
+                                    setRatioDenominator(option.value);
+                                    setShowRatioDenominatorDropdown(false);
+                                }}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="map-overlay">
             <div className="map-container-with-sidebar">
@@ -501,28 +708,32 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                             <div className="sort-controls">
                                 <span className="sort-label">Sort by:</span>
                                 <div className="sort-dropdown-container">
-                                    <select
-                                        value={sortField}
-                                        onChange={handleSortChange}
-                                        className="sort-dropdown"
-                                    >
-                                        {viewMode === 'restaurants' ? (
-                                            <>
-                                                <option value="distance">Distance</option>
-                                                <option value="rating">Rating</option>
-                                                <option value="name">Name</option>
-                                                <option value="priceLevel">Price</option>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <option value="calories">Calories</option>
-                                                <option value="protein">Protein</option>
-                                                <option value="price">Price</option>
-                                                <option value="distance">Distance</option>
-                                                <option value="ratio">📊 Ratio</option>
-                                            </>
-                                        )}
-                                    </select>
+                                    {isMobile ? (
+                                        <MobileDropdown />
+                                    ) : (
+                                        <select
+                                            value={sortField}
+                                            onChange={handleSortChange}
+                                            className="sort-dropdown"
+                                        >
+                                            {viewMode === 'restaurants' ? (
+                                                <>
+                                                    <option value="distance">Distance</option>
+                                                    <option value="rating">Rating</option>
+                                                    <option value="name">Name</option>
+                                                    <option value="priceLevel">Price</option>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="calories">Calories</option>
+                                                    <option value="protein">Protein</option>
+                                                    <option value="price">Price</option>
+                                                    <option value="distance">Distance</option>
+                                                    <option value="ratio">📊 Ratio</option>
+                                                </>
+                                            )}
+                                        </select>
+                                    )}
                                     <div className="sort-direction-indicator">
                                         {sortDirection === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                     </div>
@@ -534,28 +745,38 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                         {showRatioSort && viewMode === 'menu_items' && (
                             <div className="ratio-config">
                                 <div className="ratio-selectors">
-                                    <select
-                                        value={ratioNumerator}
-                                        onChange={(e) => setRatioNumerator(e.target.value)}
-                                        className="ratio-select"
-                                    >
-                                        <option value="protein">Protein (g)</option>
-                                        <option value="calories">Calories</option>
-                                        <option value="carbs">Carbs (g)</option>
-                                        <option value="fat">Fat (g)</option>
-                                    </select>
-                                    <span className="ratio-divider">÷</span>
-                                    <select
-                                        value={ratioDenominator}
-                                        onChange={(e) => setRatioDenominator(e.target.value)}
-                                        className="ratio-select"
-                                    >
-                                        <option value="price">Price ($)</option>
-                                        <option value="calories">Calories</option>
-                                        <option value="protein">Protein (g)</option>
-                                        <option value="carbs">Carbs (g)</option>
-                                        <option value="fat">Fat (g)</option>
-                                    </select>
+                                    {isMobile ? (
+                                        <>
+                                            <RatioNumeratorMobileDropdown />
+                                            <span className="ratio-divider">÷</span>
+                                            <RatioDenominatorMobileDropdown />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <select
+                                                value={ratioNumerator}
+                                                onChange={(e) => setRatioNumerator(e.target.value)}
+                                                className="ratio-select"
+                                            >
+                                                <option value="protein">Protein (g)</option>
+                                                <option value="calories">Calories</option>
+                                                <option value="carbs">Carbs (g)</option>
+                                                <option value="fat">Fat (g)</option>
+                                            </select>
+                                            <span className="ratio-divider">÷</span>
+                                            <select
+                                                value={ratioDenominator}
+                                                onChange={(e) => setRatioDenominator(e.target.value)}
+                                                className="ratio-select"
+                                            >
+                                                <option value="price">Price ($)</option>
+                                                <option value="calories">Calories</option>
+                                                <option value="protein">Protein (g)</option>
+                                                <option value="carbs">Carbs (g)</option>
+                                                <option value="fat">Fat (g)</option>
+                                            </select>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="ratio-examples">
                                     <span className="ratio-example">
