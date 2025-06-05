@@ -238,6 +238,25 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         }
     };
 
+    const handleSortChange = (e) => {
+        const field = e.target.value;
+        handleSort(field);
+    };
+
+    const getSortLabel = (field) => {
+        const labels = {
+            distance: 'Distance',
+            rating: 'Rating',
+            name: 'Name',
+            priceLevel: 'Price',
+            calories: 'Calories',
+            protein: 'Protein',
+            price: 'Price',
+            ratio: '📊 Ratio'
+        };
+        return labels[field] || field;
+    };
+
     const formatRating = (rating) => {
         return rating ? `⭐ ${rating.toFixed(1)}` : 'No rating';
     };
@@ -259,18 +278,6 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
 
         return `${ratio.toFixed(2)} ${numLabel}/${denLabel}`;
     };
-
-    const SortButton = ({ field, children }) => (
-        <button
-            className={`sort-button ${sortField === field ? 'active' : ''}`}
-            onClick={() => handleSort(field)}
-        >
-            {children}
-            {sortField === field && (
-                sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-            )}
-        </button>
-    );
 
     // Render restaurants view
     const renderRestaurantsView = () => (
@@ -417,22 +424,33 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                             </h3>
                             <div className="sort-controls">
                                 <span className="sort-label">Sort by:</span>
-                                {viewMode === 'restaurants' ? (
-                                    <>
-                                        <SortButton field="distance">Distance</SortButton>
-                                        <SortButton field="rating">Rating</SortButton>
-                                        <SortButton field="name">Name</SortButton>
-                                        <SortButton field="priceLevel">Price</SortButton>
-                                    </>
-                                ) : (
-                                    <>
-                                        <SortButton field="calories">Calories</SortButton>
-                                        <SortButton field="protein">Protein</SortButton>
-                                        <SortButton field="price">Price</SortButton>
-                                        <SortButton field="distance">Distance</SortButton>
-                                        <SortButton field="ratio">📊 Ratio</SortButton>
-                                    </>
-                                )}
+                                <div className="sort-dropdown-container">
+                                    <select
+                                        value={sortField}
+                                        onChange={handleSortChange}
+                                        className="sort-dropdown"
+                                    >
+                                        {viewMode === 'restaurants' ? (
+                                            <>
+                                                <option value="distance">Distance</option>
+                                                <option value="rating">Rating</option>
+                                                <option value="name">Name</option>
+                                                <option value="priceLevel">Price</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="calories">Calories</option>
+                                                <option value="protein">Protein</option>
+                                                <option value="price">Price</option>
+                                                <option value="distance">Distance</option>
+                                                <option value="ratio">📊 Ratio</option>
+                                            </>
+                                        )}
+                                    </select>
+                                    <div className="sort-direction-indicator">
+                                        {sortDirection === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -478,6 +496,7 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                     <div className="map-section">
                         {bounds && (
                             <MapContainer
+                                key="restaurant-map"
                                 bounds={bounds}
                                 boundsOptions={{ padding: [20, 20] }}
                                 style={{ height: '100%', width: '100%' }}
@@ -487,10 +506,9 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                             >
                                 <TileLayer
                                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                                     subdomains="abcd"
                                     maxZoom={20}
-                                    detectRetina={true}
                                 />
 
                                 {/* User location marker */}
