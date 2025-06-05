@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -95,6 +95,76 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     const [showRatioSort, setShowRatioSort] = useState(false);
     const [ratioNumerator, setRatioNumerator] = useState('protein');
     const [ratioDenominator, setRatioDenominator] = useState('price');
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Touch handling refs
+    const touchStartY = useRef(0);
+    const touchStartTime = useRef(0);
+    const sidebarRef = useRef(null);
+
+    // Check if we're on mobile
+    useEffect(() => {
+        const checkIsMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+
+        return () => window.removeEventListener('resize', checkIsMobile);
+    }, []);
+
+    // Handle touch events for sliding panel
+    const handleTouchStart = (e) => {
+        if (!isMobile) return;
+
+        touchStartY.current = e.touches[0].clientY;
+        touchStartTime.current = Date.now();
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isMobile) return;
+
+        // Don't call preventDefault as it conflicts with passive listeners
+        // Instead, we'll use CSS touch-action to control scrolling behavior
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchStartY.current - touchY;
+
+        // Store the delta for use in touchend
+        touchStartY.current = deltaY;
+    };
+
+    const handleTouchEnd = (e) => {
+        if (!isMobile) return;
+
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchStartY.current - touchEndY;
+        const touchDuration = Date.now() - touchStartTime.current;
+
+        // Determine if it's a swipe gesture
+        const isSwipe = Math.abs(deltaY) > 50 && touchDuration < 300;
+        const isTap = Math.abs(deltaY) < 10 && touchDuration < 200;
+
+        if (isSwipe) {
+            // Swipe up = expand, swipe down = collapse
+            if (deltaY > 0) {
+                setIsExpanded(true);
+            } else {
+                setIsExpanded(false);
+            }
+        } else if (isTap) {
+            // Tap to toggle
+            setIsExpanded(!isExpanded);
+        }
+    };
+
+    // Handle click on sidebar header (for desktop and as fallback)
+    const handleSidebarHeaderClick = () => {
+        if (isMobile) {
+            setIsExpanded(!isExpanded);
+        }
+    };
 
     // Calculate distance between two points in km
     const calculateDistance = (lat1, lng1, lat2, lng2) => {
@@ -414,8 +484,14 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
 
                 <div className="map-content">
                     {/* Restaurant/Menu Items List Sidebar */}
-                    <div className="restaurant-sidebar">
-                        <div className="sidebar-header">
+                    <div
+                        ref={sidebarRef}
+                        className={`restaurant-sidebar ${isExpanded ? 'expanded' : ''}`}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                    >
+                        <div className="sidebar-header" onClick={handleSidebarHeaderClick}>
                             <h3>
                                 {viewMode === 'restaurants'
                                     ? `Restaurant List (${sortedRestaurants.length})`
@@ -468,7 +544,7 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                         <option value="carbs">Carbs (g)</option>
                                         <option value="fat">Fat (g)</option>
                                     </select>
-                                    <span className="ratio-divider">/</span>
+                                    <span className="ratio-divider">÷</span>
                                     <select
                                         value={ratioDenominator}
                                         onChange={(e) => setRatioDenominator(e.target.value)}
@@ -515,7 +591,7 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                 <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
                                     <Popup>
                                         <div className="popup-content">
-                                            <strong>Your Location</strong>
+                                            <h3>📍 Your Location</h3>
                                         </div>
                                     </Popup>
                                 </Marker>
@@ -562,30 +638,31 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                 ))}
                             </MapContainer>
                         )}
-                    </div>
-                </div>
 
-                <div className="map-legend">
-                    <div className="legend-item">
-                        <div className="legend-icon user-legend-icon">
-                            <svg width="16" height="20" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M14 0C6.27 0 0 6.27 0 14C0 24.5 14 36 14 36S28 24.5 28 14C28 6.27 21.73 0 14 0Z" fill="#3b82f6" />
-                                <circle cx="14" cy="14" r="8" fill="white" />
-                                <circle cx="14" cy="14" r="4" fill="#3b82f6" />
-                            </svg>
+                        {/* Map Legend */}
+                        <div className="map-legend">
+                            <div className="legend-item">
+                                <div className="legend-icon user-legend-icon">
+                                    <svg width="16" height="20" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M14 0C6.27 0 0 6.27 0 14C0 24.5 14 36 14 36S28 24.5 28 14C28 6.27 21.73 0 14 0Z" fill="#3b82f6" />
+                                        <circle cx="14" cy="14" r="8" fill="white" />
+                                        <circle cx="14" cy="14" r="4" fill="#3b82f6" />
+                                    </svg>
+                                </div>
+                                <span>Your Location</span>
+                            </div>
+                            <div className="legend-item">
+                                <div className="legend-icon restaurant-legend-icon">
+                                    <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#22c55e" />
+                                        <circle cx="16" cy="16" r="10" fill="white" />
+                                        <path d="M20 12H12C11.45 12 11 12.45 11 13V19C11 19.55 11.45 20 12 20H20C20.55 20 21 19.55 21 19V13C21 12.45 20.55 12 20 12ZM19 18H13V14H19V18Z" fill="#22c55e" />
+                                        <path d="M16 9C17.1 9 18 9.9 18 11V12H14V11C14 9.9 14.9 9 16 9Z" fill="#22c55e" />
+                                    </svg>
+                                </div>
+                                <span>Restaurants</span>
+                            </div>
                         </div>
-                        <span>Your Location</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-icon restaurant-legend-icon">
-                            <svg width="16" height="20" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M16 0C7.16 0 0 7.16 0 16C0 28 16 40 16 40S32 28 32 16C32 7.16 24.84 0 16 0Z" fill="#22c55e" />
-                                <circle cx="16" cy="16" r="10" fill="white" />
-                                <path d="M20 12H12C11.45 12 11 12.45 11 13V19C11 19.55 11.45 20 12 20H20C20.55 20 21 19.55 21 19V13C21 12.45 20.55 12 20 12ZM19 18H13V14H19V18Z" fill="#22c55e" />
-                                <path d="M16 9C17.1 9 18 9.9 18 11V12H14V11C14 9.9 14.9 9 16 9Z" fill="#22c55e" />
-                            </svg>
-                        </div>
-                        <span>Restaurants</span>
                     </div>
                 </div>
             </div>
