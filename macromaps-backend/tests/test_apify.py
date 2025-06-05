@@ -12,6 +12,10 @@ from utils.apify_utils import extract_restaurants_via_apify
 def test_apify_api_and_save_response():
     """Test the Apify API and save the response to example.json"""
 
+    # Print the API key being used
+    api_key = os.getenv("APIFY_API_TOKEN", "your-apify-token-here")
+    print(f"Using Apify API key: {api_key}")
+
     # Test coordinates (SM Megamall, Mandaluyong City)
     test_latitude = 14.5851
     test_longitude = 121.0560

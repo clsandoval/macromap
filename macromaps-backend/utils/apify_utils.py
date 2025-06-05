@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 from apify_client import ApifyClient
+
+load_dotenv()
 
 
 # Apify API configuration
@@ -13,16 +16,25 @@ def extract_restaurants_via_apify(latitude, longitude):
         # Initialize the ApifyClient with your Apify API token
         client = ApifyClient(APIFY_API_TOKEN)
 
-        # Create location query from coordinates
-        location_query = f"{latitude},{longitude}"
+        # Create custom geolocation object with coordinates and radius
+        custom_geolocation = {
+            "type": "Point",
+            "coordinates": [
+                longitude,
+                latitude,
+            ],  # Note: longitude first, then latitude
+            "radiusKm": 1,
+        }
 
-        print(f"Starting Apify actor for location: {location_query}")
+        print(
+            f"Starting Apify actor for location: {latitude},{longitude} with {custom_geolocation['radiusKm']}km radius"
+        )
 
         # Prepare the Actor input
         run_input = {
             "searchStringsArray": ["restaurants"],
-            "locationQuery": location_query,
-            "maxCrawledPlacesPerSearch": 10,
+            "customGeolocation": custom_geolocation,
+            "maxCrawledPlacesPerSearch": 2,
             "language": "en",
             "skipClosedPlaces": False,
             "exportPlaceUrls": False,
@@ -38,7 +50,7 @@ def extract_restaurants_via_apify(latitude, longitude):
             "reviewsTranslation": "originalAndTranslated",
             "personalDataOptions": "personal-data-to-be-excluded",
             "cacheBusting": False,
-            "maxImages": 5,  # Limit images to avoid too much data
+            "maxImages": 500,  # Limit images to avoid too much data
         }
 
         # Run the Actor and wait for it to finish
