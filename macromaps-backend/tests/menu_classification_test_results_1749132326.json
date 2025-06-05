@@ -1,0 +1,767 @@
+{
+  "test_timestamp": 1749132326.2358763,
+  "images_tested": 20,
+  "models_tested": 3,
+  "results": [
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4noysWKba-xNIwydZbtszhUimaOgDDBatU26RlkOd8_SJp9jnnV8Wm_KQ8QbVn2mtx_Zp6FvVBiombstZlwMvUJV4rjYT4wGbEJ7yc4Go4PaRuTibTc-TezjW4e467K2uPw0kWSl=w1920-h1080-k-no",
+        "response_time": 6.649561405181885,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a plated dish, specifically noodles with salmon, onions, and garnishes. There is no visible text listing food or drink items, no prices, and no menu structure. The image is focused on the food itself, not on any menu or written content. Therefore, it does not meet any of the criteria for a readable restaurant menu in English.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1248,
+        "cost_estimate": 0.0037440000000000004
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4noysWKba-xNIwydZbtszhUimaOgDDBatU26RlkOd8_SJp9jnnV8Wm_KQ8QbVn2mtx_Zp6FvVBiombstZlwMvUJV4rjYT4wGbEJ7yc4Go4PaRuTibTc-TezjW4e467K2uPw0kWSl=w1920-h1080-k-no",
+        "response_time": 3.9567019939422607,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a close-up of a plated dish with noodles, salmon, and garnishes. There is no visible text listing food or drink items, no prices, and no menu structure. The image quality is clear, but it is a food photo, not a menu.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 1510,
+        "cost_estimate": 0.0012079999999999999
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4noysWKba-xNIwydZbtszhUimaOgDDBatU26RlkOd8_SJp9jnnV8Wm_KQ8QbVn2mtx_Zp6FvVBiombstZlwMvUJV4rjYT4wGbEJ7yc4Go4PaRuTibTc-TezjW4e467K2uPw0kWSl=w1920-h1080-k-no",
+        "response_time": 3.321135997772217,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of food, likely a dish from a restaurant, but there is no visible menu or list of food items with prices. The only text visible is part of the restaurant's branding on the plate, which is not sufficient to classify it as a menu. The image quality is good enough to see the food clearly, but it does not contain any readable menu content.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 1991,
+        "cost_estimate": 0.0003982
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4no5wy4_6-sc1HiLEnRZXoa0Tjue8BmBJ0PNQ7Gql3Rfh8FKD67HAJlAoiBwUyASSvKfC5F2gQskVoPeTgevSG9gaYhYinyuHrF7kyiGHK9BTjuIiX17YAMVpRsuABn6DfYqW-uWSA=w1920-h1080-k-no",
+        "response_time": 9.113714694976807,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a restaurant table setting with plates, glasses, utensils, and some condiments. There is a menu visible on the table, but the text on the menu is not readable due to the angle and distance. The rest of the image shows the restaurant interior and a view of a shopping mall. There are no clear, legible food or drink items with prices visible in the image. The image quality is good, but the content does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Restaurant interior/table setting",
+        "error": null,
+        "tokens_used": 1442,
+        "cost_estimate": 0.004326000000000001
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4no5wy4_6-sc1HiLEnRZXoa0Tjue8BmBJ0PNQ7Gql3Rfh8FKD67HAJlAoiBwUyASSvKfC5F2gQskVoPeTgevSG9gaYhYinyuHrF7kyiGHK9BTjuIiX17YAMVpRsuABn6DfYqW-uWSA=w1920-h1080-k-no",
+        "response_time": 9.951400995254517,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a restaurant table setting with plates, glasses, and condiments, but there is no clear, readable menu text visible. Although there is a dark object on the table that might be a menu, the text on it is not legible or visible enough to confirm it as a menu. The background shows a mall or shopping area, not a menu display. Therefore, this image does not meet the criteria of showing a clear, readable restaurant menu in English.",
+        "image_type": "Restaurant interior with table setting",
+        "error": null,
+        "tokens_used": 3149,
+        "cost_estimate": 0.0025192
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4no5wy4_6-sc1HiLEnRZXoa0Tjue8BmBJ0PNQ7Gql3Rfh8FKD67HAJlAoiBwUyASSvKfC5F2gQskVoPeTgevSG9gaYhYinyuHrF7kyiGHK9BTjuIiX17YAMVpRsuABn6DfYqW-uWSA=w1920-h1080-k-no",
+        "response_time": 4.86941123008728,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a restaurant interior with tables, chairs, and some condiments, but there is no visible menu or menu content in the image. There are no clear, readable food or drink items, prices, or menu structure present. The focus is on the dining area, not on a menu display or printed menu. Therefore, it does not meet the criteria for a readable, English-language menu.",
+        "image_type": "Photograph of restaurant interior",
+        "error": null,
+        "tokens_used": 4420,
+        "cost_estimate": 0.000884
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrGE9qvTM0TBU37HPo1f2zpatKFBSPM7Oih_fmj80I3CMFoyxCotYxKeJjY0wB5ZbHpdRkkjpyeyCbvXpMPrA9Z90QGqd2D0LOrzwgU3JZ7hFsNoiHO66Bt-YKuKTtkxMwe8uQoBA=w1920-h1080-k-no",
+        "response_time": 4.533183574676514,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a plate of food with rice, vegetables, and what appears to be chicken. There is no visible text listing food or drink items, no prices, and no menu structure. The image is a close-up of a prepared dish, not a menu. There is no readable menu content in English or any other language.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1408,
+        "cost_estimate": 0.004224
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrGE9qvTM0TBU37HPo1f2zpatKFBSPM7Oih_fmj80I3CMFoyxCotYxKeJjY0wB5ZbHpdRkkjpyeyCbvXpMPrA9Z90QGqd2D0LOrzwgU3JZ7hFsNoiHO66Bt-YKuKTtkxMwe8uQoBA=w1920-h1080-k-no",
+        "response_time": 4.227312803268433,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a plate of food with rice, vegetables, and meat. There is no visible text listing food or drink items, prices, or any menu structure. The image quality is clear, but it does not contain any menu content in English or any other language. Therefore, it does not meet the criteria for being classified as a menu.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 2075,
+        "cost_estimate": 0.0016600000000000002
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrGE9qvTM0TBU37HPo1f2zpatKFBSPM7Oih_fmj80I3CMFoyxCotYxKeJjY0wB5ZbHpdRkkjpyeyCbvXpMPrA9Z90QGqd2D0LOrzwgU3JZ7hFsNoiHO66Bt-YKuKTtkxMwe8uQoBA=w1920-h1080-k-no",
+        "response_time": 2.9473276138305664,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of food with rice, vegetables, and meat, but there is no visible menu or menu text in the image. The focus is on the food, not on any menu items or prices. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 2811,
+        "cost_estimate": 0.0005622
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4noPEJfxF6Dbq1tzihva3hRidP-xoWoGvNdjqTSEayzARw2afz-GI7sLv2wBR41VIY3B2jZKmDLmi7NurAzzpvwhr8NmPZJCtpeS0Rxao7DUKqfZ1y2V1WZwyqhUocljpCsd8Axq=w1920-h1080-k-no",
+        "response_time": 4.930891513824463,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a plated food dish, likely a type of fried roll with sauce and shredded cabbage. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is focused solely on the food itself and does not contain any menu content in English or any other language.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1411,
+        "cost_estimate": 0.004233
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4noPEJfxF6Dbq1tzihva3hRidP-xoWoGvNdjqTSEayzARw2afz-GI7sLv2wBR41VIY3B2jZKmDLmi7NurAzzpvwhr8NmPZJCtpeS0Rxao7DUKqfZ1y2V1WZwyqhUocljpCsd8Axq=w1920-h1080-k-no",
+        "response_time": 3.2888338565826416,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a close-up of a food dish with fried rolls drizzled with sauce on a bed of shredded cabbage. There is no visible text, menu items, prices, or any menu structure present in the image. The content is purely a food photograph without any readable English text or menu information.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 2067,
+        "cost_estimate": 0.0016536
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4noPEJfxF6Dbq1tzihva3hRidP-xoWoGvNdjqTSEayzARw2afz-GI7sLv2wBR41VIY3B2jZKmDLmi7NurAzzpvwhr8NmPZJCtpeS0Rxao7DUKqfZ1y2V1WZwyqhUocljpCsd8Axq=w1920-h1080-k-no",
+        "response_time": 3.4625723361968994,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of food, specifically fried items with sauce and shredded cabbage, but there is no visible menu or text listing food items and prices. The focus is on the dish, not on a menu structure or readable menu content. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 2814,
+        "cost_estimate": 0.0005628000000000001
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npC9IZv0irj3i5nVRsMRaNNdcGiDpE4KHOblzKMZ53QhnmgfspiyTxo4LjAfEgt8TS4LYGxbwHxc3ZgwPrkK-E-u4jh61KigZGCiqC0zjskmeBwWdntFmd9YVb7U92TjAmHr6D_=w1920-h1080-k-no",
+        "response_time": 4.633257627487183,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a plate with three dumplings on a bed of bean sprouts. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is a food photo, not a menu. Therefore, it does not meet any of the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 1751,
+        "cost_estimate": 0.005253
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npC9IZv0irj3i5nVRsMRaNNdcGiDpE4KHOblzKMZ53QhnmgfspiyTxo4LjAfEgt8TS4LYGxbwHxc3ZgwPrkK-E-u4jh61KigZGCiqC0zjskmeBwWdntFmd9YVb7U92TjAmHr6D_=w1920-h1080-k-no",
+        "response_time": 2.9164035320281982,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a close-up of three dumplings on a black plate with some garnish. There is no visible text, food/drink item names, prices, or any menu structure present in the image. The content is a food photograph, not a menu.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 2058,
+        "cost_estimate": 0.0016464000000000001
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npC9IZv0irj3i5nVRsMRaNNdcGiDpE4KHOblzKMZ53QhnmgfspiyTxo4LjAfEgt8TS4LYGxbwHxc3ZgwPrkK-E-u4jh61KigZGCiqC0zjskmeBwWdntFmd9YVb7U92TjAmHr6D_=w1920-h1080-k-no",
+        "response_time": 2.9866440296173096,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of food, specifically dumplings, on a black rectangular dish. There is no visible menu or text listing food items or prices. The background and surroundings do not contain any readable menu content, and the image does not include any menu structure or organization. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 2823,
+        "cost_estimate": 0.0005646
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npGW-8l-nxk28IkdZWTW1P74_Hq-Jkz2LcTw1Z_AtfGGGU-7Y_5uCcFa8CssfmCusIuDX5ln6RFzuXj_6zjq8dsA9fNM8hDtJ3U822QgaTe7eKzVL0mqT1bwCMt-23KI5P7gpBUeQ=w1920-h1080-k-no",
+        "response_time": 3.9871726036071777,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a bowl of soup with croutons and a slice of bread on a plate. There is no visible text, no menu structure, no prices, and no indication of food or drink items listed in English or any other language. The image is a clear photo of food, not a menu.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1404,
+        "cost_estimate": 0.004212
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npGW-8l-nxk28IkdZWTW1P74_Hq-Jkz2LcTw1Z_AtfGGGU-7Y_5uCcFa8CssfmCusIuDX5ln6RFzuXj_6zjq8dsA9fNM8hDtJ3U822QgaTe7eKzVL0mqT1bwCMt-23KI5P7gpBUeQ=w1920-h1080-k-no",
+        "response_time": 3.565579891204834,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a bowl of soup with croutons and a piece of bread on a plate. There is no visible text, menu items, prices, or any menu structure present in the image. The content is a food photograph, not a menu.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 3103,
+        "cost_estimate": 0.0024824
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npGW-8l-nxk28IkdZWTW1P74_Hq-Jkz2LcTw1Z_AtfGGGU-7Y_5uCcFa8CssfmCusIuDX5ln6RFzuXj_6zjq8dsA9fNM8hDtJ3U822QgaTe7eKzVL0mqT1bwCMt-23KI5P7gpBUeQ=w1920-h1080-k-no",
+        "response_time": 2.878535270690918,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a bowl of soup with some bread on the side, but there is no visible menu or text listing food or drink items. The image does not contain any readable menu content, and it appears to be a food photo rather than a menu. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 4406,
+        "cost_estimate": 0.0008812000000000001
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrEllezevQlPtAYnICQ85uyC0JLEdFi7yr2tDSfuNKmVYfvKN7Rulm_qLR7_24ZpG4ht7zEP54cFJRn-4zRtjYcg4x7hwBYE3p_B6zaMn2uzNof0s13o7jNhIgtU_BYVnRjC38=w1920-h1080-k-no",
+        "response_time": 5.46560001373291,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a plate of fried food (likely karaage) with some shredded cabbage and a dollop of sauce, placed on a table. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is a clear food photograph and does not contain any menu content in English or any other language.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1244,
+        "cost_estimate": 0.003732
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrEllezevQlPtAYnICQ85uyC0JLEdFi7yr2tDSfuNKmVYfvKN7Rulm_qLR7_24ZpG4ht7zEP54cFJRn-4zRtjYcg4x7hwBYE3p_B6zaMn2uzNof0s13o7jNhIgtU_BYVnRjC38=w1920-h1080-k-no",
+        "response_time": 2.765683650970459,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a plate of food with fried items and a side of sauce and shredded cabbage. There is no visible text listing food or drink items, no prices, and no menu structure. The image is a food photo, not a menu.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 1504,
+        "cost_estimate": 0.0012032
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrEllezevQlPtAYnICQ85uyC0JLEdFi7yr2tDSfuNKmVYfvKN7Rulm_qLR7_24ZpG4ht7zEP54cFJRn-4zRtjYcg4x7hwBYE3p_B6zaMn2uzNof0s13o7jNhIgtU_BYVnRjC38=w1920-h1080-k-no",
+        "response_time": 3.5787770748138428,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of fried chicken with some shredded cabbage and a dollop of mayonnaise or sauce, but there is no visible menu or menu text in the image. The background includes a black surface and a part of a phone, but no readable menu items or prices are present. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 1989,
+        "cost_estimate": 0.0003978
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nosPH40ClpHPiIuPsNqIr5W_mfuYthj3_qHVERPiRDyy5vQJ5tBzbqLbYPyJesj7jGvd8lgRkXDzFS2C96rgGFBm4engg1dErCaDS-4cCt1Tvm1-rZh_F7GLwWGwppmEkJ3K1rJQw=w1920-h1080-k-no",
+        "response_time": 6.1476967334747314,
+        "is_menu": true,
+        "confidence_level": "Very High",
+        "reasoning": "The image clearly shows a restaurant menu with legible text in English. Food and drink items are listed under organized categories such as 'Best Antipasti,' 'Special Al Dente Pasta,' 'Platters,' 'Thin Crust Pizza,' 'Mains,' 'Soup of the Day,' 'Fresh Insalate,' 'Risotto,' 'Coffee & Tea,' 'Drinks,' and 'Desserts.' Each item has a corresponding price, and the menu structure is easy to follow. The image quality is excellent, allowing all menu items and prices to be read without difficulty. The text is entirely in English.",
+        "image_type": "Printed restaurant menu",
+        "error": null,
+        "tokens_used": 1462,
+        "cost_estimate": 0.004386
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nosPH40ClpHPiIuPsNqIr5W_mfuYthj3_qHVERPiRDyy5vQJ5tBzbqLbYPyJesj7jGvd8lgRkXDzFS2C96rgGFBm4engg1dErCaDS-4cCt1Tvm1-rZh_F7GLwWGwppmEkJ3K1rJQw=w1920-h1080-k-no",
+        "response_time": 6.266127586364746,
+        "is_menu": true,
+        "confidence_level": "High",
+        "reasoning": "The image clearly shows a printed restaurant menu with legible text in English. The menu is well-organized into sections such as Best Antipasti, Soup of the Day, Fresh Insalate, Risotto, Special Al Dente Pasta, Platters, Thin Crust Pizza, Mains, Coffee & Tea, Drinks, and Desserts. Each food and drink item is listed with corresponding prices that are clearly visible. The image quality is sufficient to read all the menu items and prices without difficulty. Therefore, it meets all criteria for classification as a menu.",
+        "image_type": "Printed restaurant menu",
+        "error": null,
+        "tokens_used": 3166,
+        "cost_estimate": 0.0025328
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nosPH40ClpHPiIuPsNqIr5W_mfuYthj3_qHVERPiRDyy5vQJ5tBzbqLbYPyJesj7jGvd8lgRkXDzFS2C96rgGFBm4engg1dErCaDS-4cCt1Tvm1-rZh_F7GLwWGwppmEkJ3K1rJQw=w1920-h1080-k-no",
+        "response_time": 4.066243886947632,
+        "is_menu": true,
+        "confidence_level": "High",
+        "reasoning": "The image shows a clear, organized menu with distinct sections such as 'Best Antipasti', 'Soup of the Day', 'Fresh Insalate', 'Risotto', 'Special Al Dente Pasta', 'Platters', 'Thin Crust Pizza', 'Mains', 'Drinks', and 'Desserts'. The text is legible, and prices are visible next to each item. The content is primarily in English, and the menu layout is typical of a restaurant menu, with item names and prices clearly displayed. The image quality is sufficient to read the menu content without difficulty.",
+        "image_type": "Printed menu",
+        "error": null,
+        "tokens_used": 4456,
+        "cost_estimate": 0.0008912
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrDyCguqGiPmiHJpltkYp-N35RcWdgIaGcHVLD7qiJMlKX9c9Alh6M0427jyYkKAKlgidJpAdjUNTiuYvagkSvgX36rbtLvYXZZRsfP-d9v5GE30wmFQvhFW3wTkzXioImTyBZQyg=w1920-h1080-k-no",
+        "response_time": 6.433112144470215,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows the interior of a restaurant or cafe, with tables, chairs, and some signage. However, there is no clear, readable restaurant menu visible in the image. There are no legible lists of food or drink items with prices, and the text that is visible is related to promotions or branding, not menu content. The image quality is good, but it does not contain the required menu structure or content.",
+        "image_type": "Restaurant interior photo",
+        "error": null,
+        "tokens_used": 1762,
+        "cost_estimate": 0.005286000000000001
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrDyCguqGiPmiHJpltkYp-N35RcWdgIaGcHVLD7qiJMlKX9c9Alh6M0427jyYkKAKlgidJpAdjUNTiuYvagkSvgX36rbtLvYXZZRsfP-d9v5GE30wmFQvhFW3wTkzXioImTyBZQyg=w1920-h1080-k-no",
+        "response_time": 4.184512138366699,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a restaurant or cafe interior with tables, chairs, and some equipment, but there is no clear, readable menu visible in the image. There are no food or drink items listed with prices, and no menu structure or text that can be read. The text that is visible is either too small or not related to menu items. Therefore, this image does not meet the criteria for a menu.",
+        "image_type": "Restaurant interior seating area",
+        "error": null,
+        "tokens_used": 1703,
+        "cost_estimate": 0.0013624000000000002
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrDyCguqGiPmiHJpltkYp-N35RcWdgIaGcHVLD7qiJMlKX9c9Alh6M0427jyYkKAKlgidJpAdjUNTiuYvagkSvgX36rbtLvYXZZRsfP-d9v5GE30wmFQvhFW3wTkzXioImTyBZQyg=w1920-h1080-k-no",
+        "response_time": 3.574334144592285,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a restaurant interior with tables, chairs, and some equipment, but there is no visible menu or list of food and drink items. The only visible text relates to a FAMCARD sign and some other signage, but these do not constitute a menu. The image quality is sufficient to see the environment but does not display any clear, readable menu in English.",
+        "image_type": "Photograph of restaurant interior",
+        "error": null,
+        "tokens_used": 2240,
+        "cost_estimate": 0.000448
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrf6E568ri5DB5uzDtypwxW4nNLtFusTUkAkiMO8MBx_oMnizm4SJnvSdOPPk2-bLyd2JUs4tPbkI5CPKjA3h6dxIjqjL1e1bZnc3dfbJD2ziw5nGJqravSB-RAjfXpgQm4ZmmGIA=w1920-h1080-k-no",
+        "response_time": 5.1790125370025635,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows the interior of a restaurant, including shelves with food products, pizza boxes, and a table with chairs. While there are some papers on the table that could potentially be menus, the text on them is not clear or readable. There are no visible, legible listings of food or drink items with prices, and the image quality does not allow for extraction of menu information. The primary focus is on the restaurant's decor and setup, not on a menu.",
+        "image_type": "Restaurant interior photo",
+        "error": null,
+        "tokens_used": 1432,
+        "cost_estimate": 0.004296
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrf6E568ri5DB5uzDtypwxW4nNLtFusTUkAkiMO8MBx_oMnizm4SJnvSdOPPk2-bLyd2JUs4tPbkI5CPKjA3h6dxIjqjL1e1bZnc3dfbJD2ziw5nGJqravSB-RAjfXpgQm4ZmmGIA=w1920-h1080-k-no",
+        "response_time": 3.7679190635681152,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a restaurant interior with a table, chairs, and shelves stocked with food products and boxes. There is no visible menu text listing food or drink items with prices. The papers on the table might be menus, but the text is not clear or readable in the image. Therefore, it does not meet the criteria of a clear, readable restaurant menu in English.",
+        "image_type": "Restaurant interior with table and shelves",
+        "error": null,
+        "tokens_used": 2084,
+        "cost_estimate": 0.0016672
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrf6E568ri5DB5uzDtypwxW4nNLtFusTUkAkiMO8MBx_oMnizm4SJnvSdOPPk2-bLyd2JUs4tPbkI5CPKjA3h6dxIjqjL1e1bZnc3dfbJD2ziw5nGJqravSB-RAjfXpgQm4ZmmGIA=w1920-h1080-k-no",
+        "response_time": 3.3614180088043213,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a restaurant interior with shelves, plates, and some food boxes, but there is no visible menu with clear, readable text listing food or drink items. The only visible text is on the boxes and containers, which are not part of a menu. The image quality is sufficient to read the text on the boxes, but these are not menu items. Therefore, it does not meet the criteria for a clear, readable menu in English.",
+        "image_type": "Photograph of restaurant interior",
+        "error": null,
+        "tokens_used": 2840,
+        "cost_estimate": 0.000568
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npBalv0wR2RN_EOD5fmpWq2VVlEG3NptZv9kmv1xc24ON8EoPwSyaEce3LCo6CnhVAfv9SgirTh2ZKrn14WjARhYRBSCDyj0uSv9aHyjbpxPyCOmkkhL6ZV1cnE17RyytTgiZaE=w1920-h1080-k-no",
+        "response_time": 5.4503703117370605,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows takeout food packaging, a paper bag, and some food containers from a restaurant called Ramen Nagi. While there are some labels and branding visible, there is no clear, organized list of food or drink items with prices. The text that is visible is mostly branding and product labeling, not a menu. There is no menu structure or organization, and no readable list of items with prices. The image quality is sufficient to see what is present, but it does not contain a menu.",
+        "image_type": "Takeout food packaging and containers",
+        "error": null,
+        "tokens_used": 1442,
+        "cost_estimate": 0.004326000000000001
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npBalv0wR2RN_EOD5fmpWq2VVlEG3NptZv9kmv1xc24ON8EoPwSyaEce3LCo6CnhVAfv9SgirTh2ZKrn14WjARhYRBSCDyj0uSv9aHyjbpxPyCOmkkhL6ZV1cnE17RyytTgiZaE=w1920-h1080-k-no",
+        "response_time": 3.6058075428009033,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows packaged food items and a paper bag with branding, but there is no clear, readable menu text listing food or drink items with prices. The text visible is on packaging labels and not organized as a menu. The image quality is sufficient to see the packaging but does not show any menu structure or itemized list with prices in English.",
+        "image_type": "Photo of packaged food items and branded bag",
+        "error": null,
+        "tokens_used": 2081,
+        "cost_estimate": 0.0016648000000000001
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npBalv0wR2RN_EOD5fmpWq2VVlEG3NptZv9kmv1xc24ON8EoPwSyaEce3LCo6CnhVAfv9SgirTh2ZKrn14WjARhYRBSCDyj0uSv9aHyjbpxPyCOmkkhL6ZV1cnE17RyytTgiZaE=w1920-h1080-k-no",
+        "response_time": 2.8698008060455322,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows food items, packaging, and some labels, but there is no clear, readable restaurant menu in English. The visible text on the labels is not sufficient to identify a menu structure or list of food/drink items with prices. The image quality is also somewhat blurry, making it difficult to read any detailed menu content.",
+        "image_type": "Photograph of food and packaging",
+        "error": null,
+        "tokens_used": 2818,
+        "cost_estimate": 0.0005636
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npJlNym8KDrmKDaQn7CWhA5Vzehw4rmsjDUuc1JZaJdFmwg3JSppgzs62MZozXwNhz849c1tj78mLJiCJkMwAlkLCmWqrOK8Rx9zE4UzjkWk231iu6kFct5xpXdpkzJaV0ZIQ9m=w1920-h1080-k-no",
+        "response_time": 4.150149345397949,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows two plates of food (a slice of cake and some sliced mango) on a table. There is no visible text, no menu structure, no prices, and nothing that resembles a restaurant menu. The image is a clear photo of food items, not a menu.",
+        "image_type": "Food photo (individual dishes)",
+        "error": null,
+        "tokens_used": 1398,
+        "cost_estimate": 0.004194
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npJlNym8KDrmKDaQn7CWhA5Vzehw4rmsjDUuc1JZaJdFmwg3JSppgzs62MZozXwNhz849c1tj78mLJiCJkMwAlkLCmWqrOK8Rx9zE4UzjkWk231iu6kFct5xpXdpkzJaV0ZIQ9m=w1920-h1080-k-no",
+        "response_time": 4.3174147605896,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows two plates with food items (a slice of cake and some mango pieces) on a table. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image quality is clear but it does not contain any menu content in English or any other language. Therefore, it does not meet the criteria for a menu image.",
+        "image_type": "Food photograph on a table",
+        "error": null,
+        "tokens_used": 2086,
+        "cost_estimate": 0.0016688
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4npJlNym8KDrmKDaQn7CWhA5Vzehw4rmsjDUuc1JZaJdFmwg3JSppgzs62MZozXwNhz849c1tj78mLJiCJkMwAlkLCmWqrOK8Rx9zE4UzjkWk231iu6kFct5xpXdpkzJaV0ZIQ9m=w1920-h1080-k-no",
+        "response_time": 2.9571924209594727,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows two plates with food, specifically a slice of cake and a bowl of mango slices in syrup. There is no visible menu or text listing food or drink items, nor any prices. The focus is on the food presentation, not on a menu. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food items",
+        "error": null,
+        "tokens_used": 2821,
+        "cost_estimate": 0.0005642
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq6UPOGx4-d7DZdiYI2rVDuYK8_SK-552lh-n5GlsiEpsuqyd36VASIPhkbwsIm8H4leviXxHclv77xSKwLv-g7boa2F3c37ls7XEvXyzOrQDGosZVYBZ_YuIf7Q_-vs1FEbxrU=w1920-h1080-k-no",
+        "response_time": 5.313959360122681,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a close-up of a pizza on a wooden tray in a restaurant setting. There is no visible text listing food or drink items, no prices, and no menu structure. The image focuses on the food itself and the restaurant interior, not on any menu content. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1414,
+        "cost_estimate": 0.004242
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq6UPOGx4-d7DZdiYI2rVDuYK8_SK-552lh-n5GlsiEpsuqyd36VASIPhkbwsIm8H4leviXxHclv77xSKwLv-g7boa2F3c37ls7XEvXyzOrQDGosZVYBZ_YuIf7Q_-vs1FEbxrU=w1920-h1080-k-no",
+        "response_time": 3.426406145095825,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a pizza on a wooden serving board placed on a table in a restaurant setting. There is no visible text listing food or drink items, no prices, and no menu structure. The image is focused on the food item itself, not on any menu content. Therefore, it does not meet the criteria for a menu image.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 2073,
+        "cost_estimate": 0.0016584000000000002
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq6UPOGx4-d7DZdiYI2rVDuYK8_SK-552lh-n5GlsiEpsuqyd36VASIPhkbwsIm8H4leviXxHclv77xSKwLv-g7boa2F3c37ls7XEvXyzOrQDGosZVYBZ_YuIf7Q_-vs1FEbxrU=w1920-h1080-k-no",
+        "response_time": 6.419190168380737,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a pizza on a table in a restaurant setting, but there is no visible menu or menu content in the image. The background contains tables and chairs, but no readable menu items or prices are present. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food and restaurant interior",
+        "error": null,
+        "tokens_used": 2814,
+        "cost_estimate": 0.0005628000000000001
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nr0UalgrOnUGuQtSfyMW7HRW2HBPJsnBB1Mzysva9XSeafk7-R-srsb05HsDkrWsZT6mLnz4gvJ348nsSXLhTwfO6tliAyJu3TaA1YtIVU306Pgnl6h3KMw3lmXdO-Zf3mcd25e5w=w1920-h1080-k-no",
+        "response_time": 5.094069480895996,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a bowl of food, likely a soup or ramen dish, with visible ingredients. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is focused solely on the food and does not contain any elements of a restaurant menu in English or any other language.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1752,
+        "cost_estimate": 0.005256
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nr0UalgrOnUGuQtSfyMW7HRW2HBPJsnBB1Mzysva9XSeafk7-R-srsb05HsDkrWsZT6mLnz4gvJ348nsSXLhTwfO6tliAyJu3TaA1YtIVU306Pgnl6h3KMw3lmXdO-Zf3mcd25e5w=w1920-h1080-k-no",
+        "response_time": 3.2184836864471436,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a close-up of a bowl of food, likely a soup or stew, with no visible text, prices, or menu structure. There is no readable English text or any indication of a menu format. The image quality is clear, but it does not contain any menu information.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 1678,
+        "cost_estimate": 0.0013424
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nr0UalgrOnUGuQtSfyMW7HRW2HBPJsnBB1Mzysva9XSeafk7-R-srsb05HsDkrWsZT6mLnz4gvJ348nsSXLhTwfO6tliAyJu3TaA1YtIVU306Pgnl6h3KMw3lmXdO-Zf3mcd25e5w=w1920-h1080-k-no",
+        "response_time": 3.4667959213256836,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a bowl of food, likely a dish served at a restaurant, but there is no visible menu or text listing food items or prices. The focus is on the food itself, not on any menu content. The background does not display a menu, and the image quality does not reveal any readable menu text. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 2247,
+        "cost_estimate": 0.00044940000000000003
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrrwjxZmdCeZyPbZVlFo2jLAEtHjs-srnrgL0uofLWKxXueDdl1Y227lk9SCFjpEC4It-3rRxMpK-lOWXObwPT4kwaUxHa2gamtEFcVzjzSSnjNt_oQBj9brc-MLEBKtEbquCou3kzyzDsA=w1920-h1080-k-no",
+        "response_time": 5.834964036941528,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a plate of plain noodles. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is a food photo, not a menu. There is no English or any other language text present to evaluate.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1401,
+        "cost_estimate": 0.004203
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrrwjxZmdCeZyPbZVlFo2jLAEtHjs-srnrgL0uofLWKxXueDdl1Y227lk9SCFjpEC4It-3rRxMpK-lOWXObwPT4kwaUxHa2gamtEFcVzjzSSnjNt_oQBj9brc-MLEBKtEbquCou3kzyzDsA=w1920-h1080-k-no",
+        "response_time": 3.4220874309539795,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a close-up of cooked noodles in a metal pan. There is no text, no food or drink items listed, no prices, and no menu structure visible. The content is purely a food photograph, not a menu.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 3099,
+        "cost_estimate": 0.0024792
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrrwjxZmdCeZyPbZVlFo2jLAEtHjs-srnrgL0uofLWKxXueDdl1Y227lk9SCFjpEC4It-3rRxMpK-lOWXObwPT4kwaUxHa2gamtEFcVzjzSSnjNt_oQBj9brc-MLEBKtEbquCou3kzyzDsA=w1920-h1080-k-no",
+        "response_time": 3.5285425186157227,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a close-up of cooked spaghetti in a metal bowl, with no visible menu or text. There are no food items listed, prices, or any menu structure present. The image is a food photo, not a menu display.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 4385,
+        "cost_estimate": 0.000877
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq_iNQyC5a4JOXvMyAGAjIJDCfw4uo8nyMk3UJbnuIMgZAqgWsak5X5K47pTL2DfeEHre-Gi7b6jHwU21CctKpvxeZCIV402gj3BbKCU27YYlhQaiOBBJUEHg9PT_9ZTtQ-DkHczw=w1920-h1080-k-no",
+        "response_time": 6.257214546203613,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a plated food dish, specifically a breaded and fried cutlet with shredded cabbage and a small bowl of sauce. There is no visible text, no menu structure, no prices, and no indication that this is a menu or contains menu information. The image is focused solely on the food item itself, not on any printed or digital menu.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1757,
+        "cost_estimate": 0.005271
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq_iNQyC5a4JOXvMyAGAjIJDCfw4uo8nyMk3UJbnuIMgZAqgWsak5X5K47pTL2DfeEHre-Gi7b6jHwU21CctKpvxeZCIV402gj3BbKCU27YYlhQaiOBBJUEHg9PT_9ZTtQ-DkHczw=w1920-h1080-k-no",
+        "response_time": 4.5128493309021,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a close-up of a plate of fried food with a dipping sauce and some shredded cabbage. There is no visible text, prices, or any menu structure. The content is clearly a food photograph, not a menu.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 1666,
+        "cost_estimate": 0.0013328
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq_iNQyC5a4JOXvMyAGAjIJDCfw4uo8nyMk3UJbnuIMgZAqgWsak5X5K47pTL2DfeEHre-Gi7b6jHwU21CctKpvxeZCIV402gj3BbKCU27YYlhQaiOBBJUEHg9PT_9ZTtQ-DkHczw=w1920-h1080-k-no",
+        "response_time": 3.019747495651245,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a close-up of fried food with a dipping sauce, and there is no visible menu or text listing food items or prices. The background is blurred and does not contain any readable menu content. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 2222,
+        "cost_estimate": 0.0004444
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nr_41z-IlJM5c9KB6OTOFSOXZqWmJQb8gUYms_O2nkoEHykbQvKQF1penW6VvcmIhA0B98wbNLolsTyzdTqnK4r2IFzcIr-X-PdxVINE408DsK-CuHQrBTr-TbaBbZDy2Y6kwpG=w1920-h1080-k-no",
+        "response_time": 5.366292953491211,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a plate of food, specifically fried chicken with shredded cabbage and a dollop of mayonnaise. There is no visible text listing food or drink items, no prices, and no menu structure. The only text present is a logo on the plate, which is not a menu. The image is a clear photo of a dish, not a menu.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1413,
+        "cost_estimate": 0.004239
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nr_41z-IlJM5c9KB6OTOFSOXZqWmJQb8gUYms_O2nkoEHykbQvKQF1penW6VvcmIhA0B98wbNLolsTyzdTqnK4r2IFzcIr-X-PdxVINE408DsK-CuHQrBTr-TbaBbZDy2Y6kwpG=w1920-h1080-k-no",
+        "response_time": 3.1227104663848877,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a plate of food with fried items, shredded cabbage, and a dollop of sauce. There is no visible text listing food or drink items, prices, or any menu structure. The image is a food photo, not a menu.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 2056,
+        "cost_estimate": 0.0016448
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nr_41z-IlJM5c9KB6OTOFSOXZqWmJQb8gUYms_O2nkoEHykbQvKQF1penW6VvcmIhA0B98wbNLolsTyzdTqnK4r2IFzcIr-X-PdxVINE408DsK-CuHQrBTr-TbaBbZDy2Y6kwpG=w1920-h1080-k-no",
+        "response_time": 3.400623321533203,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of fried chicken with some shredded cabbage and mayonnaise, but there is no visible menu or text listing food items or prices. The focus is on the food, not on any menu content. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 2810,
+        "cost_estimate": 0.0005620000000000001
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrleQMTWEnwZ3NZi11FsW5cxPQo7DtVIYBs62S6Is6B-eVuom3yrCmjcl92I7r5Eflt23tRc8UjFP_7QFVCMmatK6Qc_BT2ChugmMhA4HOeus-JFPOa5N2oq_MLlDthg_jO8qn2=w1920-h1080-k-no",
+        "response_time": 6.826982736587524,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a bowl of ramen with various toppings. There is no visible text listing food or drink items, no prices, and no menu structure. The image is focused on the food itself, not on any menu content. There is no readable menu text in English or any other language present in the image.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1408,
+        "cost_estimate": 0.004224
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrleQMTWEnwZ3NZi11FsW5cxPQo7DtVIYBs62S6Is6B-eVuom3yrCmjcl92I7r5Eflt23tRc8UjFP_7QFVCMmatK6Qc_BT2ChugmMhA4HOeus-JFPOa5N2oq_MLlDthg_jO8qn2=w1920-h1080-k-no",
+        "response_time": 4.320169448852539,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a close-up of a bowl of food, specifically a dish of ramen or noodle soup. There is no visible text listing food or drink items, no prices, and no menu structure. The background includes a placemat or paper with some illustrations and text, but it is not clear or focused enough to be considered a readable menu. Therefore, this image does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 3140,
+        "cost_estimate": 0.002512
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrleQMTWEnwZ3NZi11FsW5cxPQo7DtVIYBs62S6Is6B-eVuom3yrCmjcl92I7r5Eflt23tRc8UjFP_7QFVCMmatK6Qc_BT2ChugmMhA4HOeus-JFPOa5N2oq_MLlDthg_jO8qn2=w1920-h1080-k-no",
+        "response_time": 3.4954259395599365,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a bowl of ramen with various toppings, but there is no visible menu or list of food items with prices. The focus is on the food, not on a menu or menu content. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 4397,
+        "cost_estimate": 0.0008794
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrSdOpOKM3fJ8EtCTVF_c3H_73uRVNDPUnFAXK41brpo7yFMa2i8cThC8gOTgB5QeRFDmcLLSeoukVsmBrtl3QXgAu7-fsUO03KFsnkGoZHPymxW2BHTxe9BxFhvVt4m9KEOu9D=w1920-h1080-k-no",
+        "response_time": 3.953962802886963,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a bowl of ramen with toppings, along with some condiment containers in the background. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is a food photograph, not a menu. There is no English text present that could be interpreted as a menu.",
+        "image_type": "Food photo (individual dish)",
+        "error": null,
+        "tokens_used": 1752,
+        "cost_estimate": 0.005256
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrSdOpOKM3fJ8EtCTVF_c3H_73uRVNDPUnFAXK41brpo7yFMa2i8cThC8gOTgB5QeRFDmcLLSeoukVsmBrtl3QXgAu7-fsUO03KFsnkGoZHPymxW2BHTxe9BxFhvVt4m9KEOu9D=w1920-h1080-k-no",
+        "response_time": 6.1492955684661865,
+        "is_menu": false,
+        "confidence_level": "high",
+        "reasoning": "The image shows a close-up of a bowl of food, likely ramen, with no visible text listing food or drink items, prices, or menu structure. The image quality is good, but there is no menu content present in the image to analyze. Therefore, it does not meet the criteria for a menu image.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 1683,
+        "cost_estimate": 0.0013464
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "https://lh3.googleusercontent.com/gps-cs-s/AC9h4nrSdOpOKM3fJ8EtCTVF_c3H_73uRVNDPUnFAXK41brpo7yFMa2i8cThC8gOTgB5QeRFDmcLLSeoukVsmBrtl3QXgAu7-fsUO03KFsnkGoZHPymxW2BHTxe9BxFhvVt4m9KEOu9D=w1920-h1080-k-no",
+        "response_time": 2.655343532562256,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a bowl of food, likely a dish from a restaurant, but there is no visible menu or text listing food items and prices. The background contains some cans, but no readable menu content is present. Therefore, it does not meet the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Photograph of food",
+        "error": null,
+        "tokens_used": 2226,
+        "cost_estimate": 0.00044520000000000003
+      }
+    ],
+    [
+      {
+        "model_name": "gpt-4.1",
+        "image_url": "http://t0.gstatic.com/images?q=tbn:ANd9GcT4Va3QpSZOYfZoGNqN0w5ES5gNn7cfNMZS9ZSQ5w3HFmO3P3DE",
+        "response_time": 5.436747789382935,
+        "is_menu": false,
+        "confidence_level": "Very High",
+        "reasoning": "The image shows a close-up of a plated food dish, likely a chicken and vegetable meal. There is no visible text, no listing of food or drink items, no prices, and no menu structure. The image is a food photograph, not a menu. Therefore, it does not meet any of the criteria for a clear, readable restaurant menu in English.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 1750,
+        "cost_estimate": 0.00525
+      },
+      {
+        "model_name": "gpt-4.1-mini",
+        "image_url": "http://t0.gstatic.com/images?q=tbn:ANd9GcT4Va3QpSZOYfZoGNqN0w5ES5gNn7cfNMZS9ZSQ5w3HFmO3P3DE",
+        "response_time": 4.032329559326172,
+        "is_menu": false,
+        "confidence_level": "High",
+        "reasoning": "The image shows a close-up of a plated dish with food, specifically a green rice or grain dish topped with grilled chicken strips and asparagus. There is no visible text, menu items, prices, or any menu structure present in the image. The content is a food photo, not a menu.",
+        "image_type": "Food photo",
+        "error": null,
+        "tokens_used": 3038,
+        "cost_estimate": 0.0024304
+      },
+      {
+        "model_name": "gpt-4.1-nano",
+        "image_url": "http://t0.gstatic.com/images?q=tbn:ANd9GcT4Va3QpSZOYfZoGNqN0w5ES5gNn7cfNMZS9ZSQ5w3HFmO3P3DE",
+        "response_time": 3.4410746097564697,
+        "is_menu": false,
+        "confidence_level": "Low",
+        "reasoning": "The image shows a plate of food, specifically a dish with mashed or chopped green ingredients and some fish on top, garnished with green herbs and asparagus. There is no visible menu, list of food items, prices, or any textual content that indicates it is a menu. The image is a food photograph, not a menu display.",
+        "image_type": "Food photograph",
+        "error": null,
+        "tokens_used": 4294,
+        "cost_estimate": 0.0008588000000000001
+      }
+    ]
+  ]
+}
