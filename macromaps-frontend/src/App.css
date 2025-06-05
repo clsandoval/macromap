@@ -1,38 +1,400 @@
 .App {
-  text-align: center;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+.landing-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
+  padding: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 2rem;
 }
 
-.App-link {
-  color: #61dafb;
+.logo-container {
+  margin-bottom: 1rem;
 }
 
-@keyframes App-logo-spin {
+.logo-icon {
+  color: #22c55e;
+  stroke-width: 2;
+}
+
+.main-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.description {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 450px;
+}
+
+.description-text {
+  font-size: 1.25rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.tap-text {
+  font-size: 1.125rem;
+  color: #9ca3af;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  max-width: 450px;
+  text-align: left;
+}
+
+.mock-toggle {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  appearance: none;
+  width: 3rem;
+  height: 1.5rem;
+  background-color: #e5e7eb;
+  border-radius: 0.75rem;
+  position: relative;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.toggle-checkbox:checked {
+  background-color: #22c55e;
+}
+
+.toggle-checkbox::before {
+  content: '';
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: white;
+  border-radius: 50%;
+  top: 0.125rem;
+  left: 0.125rem;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-checkbox:checked::before {
+  transform: translateX(1.5rem);
+}
+
+.toggle-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.scan-button {
+  background-color: #22c55e !important;
+  color: white !important;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.scan-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.scan-button:hover:not(:disabled) {
+  background-color: #16a34a !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.scan-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.button-icon {
+  flex-shrink: 0;
+}
+
+.spinning {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
+  }
+}
+
+.footer {
+  margin-top: auto;
+  padding-top: 2rem;
+}
+
+.footer-text {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .landing-container {
+    padding: 1.5rem;
+  }
+
+  .main-title {
+    font-size: 2.5rem;
+  }
+
+  .description-text {
+    font-size: 1.125rem;
+  }
+
+  .tap-text {
+    font-size: 1rem;
+  }
+
+  .scan-button {
+    padding: 0.875rem 1.75rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-title {
+    font-size: 2rem;
+  }
+
+  .description-text {
+    font-size: 1rem;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Map Styles */
+.map-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.map-container {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.map-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.restaurant-map {
+  border-radius: 0;
+}
+
+.map-legend {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.legend-item img {
+  height: 20px;
+  width: auto;
+}
+
+/* Popup Styles */
+.popup-content {
+  min-width: 200px;
+}
+
+.popup-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.restaurant-category {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.restaurant-rating {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.restaurant-address {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.restaurant-phone,
+.restaurant-website,
+.restaurant-maps {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+.restaurant-website a,
+.restaurant-maps a {
+  color: #22c55e;
+  text-decoration: none;
+}
+
+.restaurant-website a:hover,
+.restaurant-maps a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive map styles */
+@media (max-width: 768px) {
+  .map-overlay {
+    padding: 0.5rem;
+  }
+
+  .map-container {
+    max-height: 95vh;
+  }
+
+  .map-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .map-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .map-legend {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .popup-content {
+    min-width: 180px;
   }
 }

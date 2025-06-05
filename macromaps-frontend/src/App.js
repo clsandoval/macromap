@@ -1,34 +1,191 @@
+import React, { useState } from 'react';
+import { Zap, Search, MapPin, AlertCircle } from 'lucide-react';
 import { Button } from './components/ui/button';
-import { Zap, Search } from "lucide-react"
+import RestaurantMap from './components/RestaurantMap';
+import './App.css';
 
-export default function MacroMapPage() {
+function App() {
+  const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState(null);
+  const [restaurants, setRestaurants] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [showMap, setShowMap] = useState(false);
+  const [mockMode, setMockMode] = useState(true); // Default to mock mode for development
+
+  const handleScanNearby = async () => {
+    setIsScanning(true);
+    setError(null);
+    setRestaurants(null);
+    setShowMap(false);
+
+    try {
+      // Check if geolocation is supported
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation is not supported by this browser');
+      }
+
+      // Get user's location
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000 // 5 minutes
+          }
+        );
+      });
+
+      const { latitude, longitude } = position.coords;
+      const userLoc = { lat: latitude, lng: longitude };
+      setUserLocation(userLoc);
+
+      console.log('User location:', { latitude, longitude });
+      console.log('Mock mode:', mockMode ? 'ENABLED' : 'DISABLED');
+
+      // Make POST request to backend endpoint
+      const response = await fetch('http://127.0.0.1:5000', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude,
+          timestamp: new Date().toISOString(),
+          accuracy: position.coords.accuracy,
+          mock: mockMode  // Add mock flag
+        })
+      });
+
+      if (!response.ok) {
+        // Try to get error details from backend response
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data);
+
+      if (data.success && data.restaurants) {
+        // Store restaurants and show map
+        setRestaurants(data.restaurants);
+        setShowMap(true);
+
+        // Also show a brief success message
+        const restaurantCount = data.restaurants.length;
+        const modeText = data.mock ? ' (using mock data)' : '';
+        console.log(`Found ${restaurantCount} restaurants nearby${modeText}! Opening map view...`);
+      } else if (data.error) {
+        // Handle backend error responses
+        setError(data.error);
+      } else {
+        setError('No restaurants found in your area. Please try a different location.');
+      }
+
+    } catch (err) {
+      console.error('Error scanning nearby:', err);
+
+      // Handle different types of errors
+      if (err.code === err.PERMISSION_DENIED) {
+        setError('Location access denied. Please enable location services to find nearby restaurants.');
+      } else if (err.code === err.POSITION_UNAVAILABLE) {
+        setError('Location information is unavailable. Please try again.');
+      } else if (err.code === err.TIMEOUT) {
+        setError('Location request timed out. Please try again.');
+      } else if (err.message.includes('HTTP error')) {
+        setError('Unable to connect to our servers. Please try again later.');
+      } else {
+        setError('Unable to get your location. Please check your settings and try again.');
+      }
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleCloseMap = () => {
+    setShowMap(false);
+    setRestaurants(null);
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6 selection:bg-emerald-200 selection:text-emerald-900">
-      <main className="w-full max-w-md text-center">
-        <Zap className="mx-auto h-16 w-16 text-emerald-500 mb-6" strokeWidth={1.5} />
-        <h1 className="text-5xl md:text-6xl font-bold text-slate-800 mb-4 tracking-tight">MacroMap</h1>
-        <p className="text-lg text-slate-600 mb-10 leading-relaxed">
-          Discover local restaurant meals tailored to your macros. <br />
-          Tap to scan your area.
-        </p>
+    <div className="App">
+      <div className="landing-container">
+        <div className="content">
+          <div className="logo-container">
+            <Zap className="logo-icon" size={64} />
+          </div>
 
-        <div className="flex justify-center mb-6">
+          <h1 className="main-title">MacroMap</h1>
+
+          <div className="description">
+            <p className="description-text">
+              Discover local restaurant meals tailored to your macros.
+            </p>
+            <p className="tap-text">
+              Tap to scan your area.
+            </p>
+          </div>
+
+          {error && (
+            <div className="error-message">
+              <AlertCircle size={20} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Mock Mode Toggle */}
+          <div className="mock-toggle">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={mockMode}
+                onChange={(e) => setMockMode(e.target.checked)}
+                className="toggle-checkbox"
+              />
+              <span className="toggle-text">
+                {mockMode ? '🧪 Mock Mode (Free)' : '🌐 Live Mode (Uses Credits)'}
+              </span>
+            </label>
+          </div>
+
           <Button
+            className="scan-button"
             size="lg"
-            className="h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-8 py-4 text-lg transition-colors duration-200 ease-in-out shadow-md hover:shadow-lg"
-            aria-label="Scan nearby restaurants for menu items"
+            onClick={handleScanNearby}
+            disabled={isScanning}
           >
-            <Search className="mr-2.5 h-6 w-6" />
-            Scan Nearby
+            {isScanning ? (
+              <>
+                <MapPin className="button-icon spinning" size={20} />
+                Finding Location...
+              </>
+            ) : (
+              <>
+                <Search className="button-icon" size={20} />
+                Scan Nearby
+              </>
+            )}
           </Button>
         </div>
 
-        {/* Removed the example search query text */}
-      </main>
+        <footer className="footer">
+          <p className="footer-text">© 2025 MacroMap. Find your fit.</p>
+        </footer>
+      </div>
 
-      <footer className="absolute bottom-6 text-center w-full">
-        <p className="text-xs text-slate-400">&copy; {new Date().getFullYear()} MacroMap. Find your fit.</p>
-      </footer>
+      {/* Restaurant Map Overlay */}
+      {showMap && restaurants && userLocation && (
+        <RestaurantMap
+          restaurants={restaurants}
+          userLocation={userLocation}
+          onClose={handleCloseMap}
+        />
+      )}
     </div>
-  )
+  );
 }
+
+export default App;
