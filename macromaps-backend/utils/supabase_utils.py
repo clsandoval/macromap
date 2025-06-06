@@ -37,6 +37,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     # Earth's radius in kilometers
     earth_radius = 6371
     distance = earth_radius * c
+    print("distance from", lat1, lon1, "to", lat2, lon2, "is", distance)
 
     return distance
 

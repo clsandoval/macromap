@@ -77,33 +77,8 @@ def scan_nearby():
 
         latitude = data["latitude"]
         longitude = data["longitude"]
-        mock_mode = data.get("mock", False)  # Check for mock flag
         radius_km = data.get("radius", 1.0)  # Default 5km radius
-
-        # Handle mock mode
-        if mock_mode:
-            print(
-                f"Mock mode enabled - generating fake restaurants near {latitude}, {longitude}"
-            )
-
-            # Generate mock restaurants
-            mock_restaurants = generate_mock_restaurants(latitude, longitude)
-
-            # Format the same way as real API response
-            formatted_restaurants = format_restaurant_data(mock_restaurants)
-
-            return jsonify(
-                {
-                    "success": True,
-                    "message": f"Found {len(formatted_restaurants)} restaurants (MOCK DATA)",
-                    "restaurants": formatted_restaurants,
-                    "searchLocation": {
-                        "latitude": latitude,
-                        "longitude": longitude,
-                    },
-                    "mock": True,
-                }
-            )
+        radius_km = 5.0  # display 5km always for the cache
 
         # Get cached restaurants from database within radius
         cached_restaurants, cache_error = get_finished_restaurants_within_radius(
@@ -238,4 +213,4 @@ if __name__ == "__main__":
         print("INFO: You can use mock mode by adding 'mock': true to your requests")
 
     print("Starting MacroMap backend server...")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)

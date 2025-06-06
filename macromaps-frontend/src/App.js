@@ -10,25 +10,34 @@ function App() {
   const [restaurants, setRestaurants] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [showMap, setShowMap] = useState(false);
-  const [mockMode, setMockMode] = useState(true); // Default to mock mode for development
 
   const handleScanNearby = async () => {
+    console.log('Scan button clicked!'); // Debug log
     setIsScanning(true);
     setError(null);
     setRestaurants(null);
     setShowMap(false);
 
     try {
+      console.log('Checking geolocation support...'); // Debug log
       // Check if geolocation is supported
       if (!navigator.geolocation) {
         throw new Error('Geolocation is not supported by this browser');
       }
 
+      console.log('Getting user location...'); // Debug log
       // Get user's location
       const position = await new Promise((resolve, reject) => {
+        console.log('Requesting geolocation permission...'); // Debug log
         navigator.geolocation.getCurrentPosition(
-          resolve,
-          reject,
+          (pos) => {
+            console.log('Geolocation success:', pos); // Debug log
+            resolve(pos);
+          },
+          (err) => {
+            console.error('Geolocation error:', err); // Debug log
+            reject(err);
+          },
           {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -42,7 +51,7 @@ function App() {
       setUserLocation(userLoc);
 
       console.log('User location:', { latitude, longitude });
-      console.log('Mock mode:', mockMode ? 'ENABLED' : 'DISABLED');
+      console.log('Making API request...'); // Debug log
 
       // Make POST request to backend endpoint
       const response = await fetch('http://127.0.0.1:5000/scan-nearby', {
@@ -54,10 +63,11 @@ function App() {
           latitude,
           longitude,
           timestamp: new Date().toISOString(),
-          accuracy: position.coords.accuracy,
-          mock: mockMode  // Add mock flag
+          accuracy: position.coords.accuracy
         })
       });
+
+      console.log('API response received:', response.status); // Debug log
 
       if (!response.ok) {
         // Try to get error details from backend response
@@ -76,12 +86,11 @@ function App() {
 
         // Show informative success message with processing summary
         const restaurantCount = data.restaurants.length;
-        const modeText = data.mock ? ' (using mock data)' : '';
 
         // Log processing summary if available
-        if (data.processing_summary && !data.mock) {
+        if (data.processing_summary) {
           const summary = data.processing_summary;
-          console.log(`Found ${restaurantCount} restaurants nearby${modeText}!`);
+          console.log(`Found ${restaurantCount} restaurants nearby!`);
           console.log(`Processing Status: ${summary.completed} completed, ${summary.pending} pending, ${summary.processing} processing, ${summary.new} new`);
           console.log(`${summary.restaurants_with_menu} restaurants have menu items available`);
 
@@ -90,7 +99,7 @@ function App() {
             console.log('Some restaurants are still processing menus - check back in a few minutes for more menu items!');
           }
         } else {
-          console.log(`Found ${restaurantCount} restaurants nearby${modeText}! Opening map view...`);
+          console.log(`Found ${restaurantCount} restaurants nearby! Opening map view...`);
         }
       } else if (data.error) {
         // Handle backend error responses
@@ -101,6 +110,12 @@ function App() {
 
     } catch (err) {
       console.error('Error scanning nearby:', err);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        name: err.name,
+        stack: err.stack
+      }); // Debug log
 
       // Handle different types of errors
       if (err.code === err.PERMISSION_DENIED) {
@@ -115,6 +130,7 @@ function App() {
         setError('Unable to get your location. Please check your settings and try again.');
       }
     } finally {
+      console.log('Scan process completed, setting isScanning to false'); // Debug log
       setIsScanning(false);
     }
   };
@@ -150,25 +166,13 @@ function App() {
             </div>
           )}
 
-          {/* Mock Mode Toggle */}
-          <div className="mock-toggle">
-            <label className="toggle-label">
-              <input
-                type="checkbox"
-                checked={mockMode}
-                onChange={(e) => setMockMode(e.target.checked)}
-                className="toggle-checkbox"
-              />
-              <span className="toggle-text">
-                {mockMode ? '🧪 Mock Mode (Free)' : '🌐 Live Mode (Uses Credits)'}
-              </span>
-            </label>
-          </div>
-
           <Button
             className="scan-button"
             size="lg"
-            onClick={handleScanNearby}
+            onClick={(e) => {
+              console.log('Button click event triggered:', e); // Debug log
+              handleScanNearby();
+            }}
             disabled={isScanning}
           >
             {isScanning ? (

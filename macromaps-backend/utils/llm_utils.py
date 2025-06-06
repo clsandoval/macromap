@@ -216,7 +216,7 @@ IMPORTANT: Always extract prices as numbers only (no currency symbols), but cons
                 },
             ],
             response_format=MenuAnalysis,
-            max_tokens=5000,
+            max_tokens=10000,
         )
 
         parsed_result = response.choices[0].message.parsed
@@ -338,7 +338,7 @@ Return a clean, deduplicated list with the best information for each unique menu
                 },
             ],
             response_format=AggregatedMenu,
-            max_tokens=5000,
+            max_tokens=10000,
         )
 
         parsed_result = response.choices[0].message.parsed

@@ -118,64 +118,6 @@ body {
   text-align: left;
 }
 
-.mock-toggle {
-  display: flex;
-  justify-content: center;
-  margin: 1rem 0;
-}
-
-.toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
-  padding: 0.5rem;
-  min-height: 44px;
-  touch-action: manipulation;
-}
-
-.toggle-checkbox {
-  appearance: none;
-  width: 3rem;
-  height: 1.5rem;
-  background-color: #374151;
-  border-radius: 0.75rem;
-  position: relative;
-  transition: background-color 0.2s ease;
-  cursor: pointer;
-  min-height: 44px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.toggle-checkbox:checked {
-  background-color: #22c55e;
-}
-
-.toggle-checkbox::before {
-  content: '';
-  position: absolute;
-  width: 1.25rem;
-  height: 1.25rem;
-  background-color: #f9fafb;
-  border-radius: 50%;
-  top: 0.125rem;
-  left: 0.125rem;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.toggle-checkbox:checked::before {
-  transform: translateX(1.5rem);
-}
-
-.toggle-text {
-  font-size: 0.875rem;
-  color: #d1d5db;
-  font-weight: 500;
-}
-
 .scan-button {
   background-color: #22c55e !important;
   color: white !important;
@@ -302,10 +244,6 @@ body {
     max-width: 260px;
   }
 
-  .mock-toggle {
-    margin: 0.75rem 0;
-  }
-
   .error-message {
     margin: 0 0.5rem;
     max-width: calc(100% - 1rem);
@@ -347,10 +285,6 @@ body {
     font-size: 0.9rem;
     width: calc(100% - 0.5rem);
     max-width: 240px;
-  }
-
-  .toggle-text {
-    font-size: 0.8rem;
   }
 
   .footer-text {
@@ -404,6 +338,41 @@ body {
     font-size: 1rem;
     margin-bottom: 0.75rem;
     text-align: center;
+  }
+
+  /* Hide controls when sidebar is collapsed on mobile */
+  .restaurant-sidebar:not(.expanded) .header-controls {
+    display: none;
+  }
+
+  /* Hide full title when collapsed, show simplified version */
+  .restaurant-sidebar:not(.expanded) .sidebar-header h3 {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+    color: #9ca3af;
+    text-align: center;
+    padding: 0.25rem 0;
+  }
+
+  /* Adjust collapsed header padding */
+  .restaurant-sidebar:not(.expanded) .sidebar-header {
+    padding: 1rem 1rem 0.5rem 1rem;
+    border-bottom: none;
+  }
+
+  /* Keep the pull handle visible */
+  .restaurant-sidebar::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 3px;
+    background-color: #6b7280;
+    border-radius: 2px;
+    z-index: 6;
+    transition: background-color 0.2s ease;
   }
 
   /* Ensure dropdown container doesn't get clipped */
@@ -562,7 +531,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 .map-container {
@@ -570,7 +539,7 @@ body {
   border-radius: 12px;
   width: 100%;
   max-width: 900px;
-  max-height: 90vh;
+  max-height: 95vh;
   overflow: hidden;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
@@ -579,8 +548,8 @@ body {
   background: #1f2937;
   border-radius: 12px;
   width: 100%;
-  max-width: 1400px;
-  max-height: 90vh;
+  max-width: 95vw;
+  max-height: 95vh;
   overflow: hidden;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
   display: flex;
@@ -590,7 +559,7 @@ body {
 .map-content {
   display: flex;
   flex: 1;
-  min-height: 600px;
+  min-height: 70vh;
 }
 
 .restaurant-sidebar {
@@ -901,6 +870,8 @@ body {
 .restaurant-map .leaflet-tile {
   width: 256px !important;
   height: 256px !important;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 /* Ensure tile layers load properly */
@@ -912,6 +883,35 @@ body {
 /* Fix for tile loading delays */
 .restaurant-map .leaflet-tile-loaded {
   opacity: 1 !important;
+}
+
+/* Force tile refresh for large containers */
+.restaurant-map .leaflet-tile-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Ensure proper map bounds calculation */
+.restaurant-map .leaflet-map-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fix for larger viewports */
+@media (min-width: 1200px) {
+  .restaurant-map .leaflet-container {
+    min-height: 85vh !important;
+  }
+
+  .restaurant-map .leaflet-tile-container {
+    transform: translate3d(0, 0, 0) !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  .restaurant-map .leaflet-container {
+    min-height: 90vh !important;
+  }
 }
 
 /* Customize zoom controls */
@@ -1521,15 +1521,6 @@ body {
     transform: none;
     box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
   }
-
-  .scan-button:active:not(:disabled) {
-    transform: scale(0.98);
-    background-color: #16a34a !important;
-  }
-
-  .toggle-checkbox:active {
-    transform: scale(0.95);
-  }
 }
 
 /* Desktop-specific improvements */
@@ -2079,6 +2070,16 @@ body {
     font-size: 0.625rem;
     margin-top: 0.125rem;
   }
+
+  .incomplete-data-badge {
+    font-size: 0.5rem;
+    padding: 0.0625rem 0.25rem;
+    margin-left: 0.25rem;
+  }
+
+  .price-unavailable {
+    font-size: 0.75rem;
+  }
 }
 
 /* Dark theme adjustments for new elements */
@@ -2286,4 +2287,94 @@ body {
   .sort-controls {
     justify-content: space-between;
   }
+}
+
+@media (min-width: 1200px) {
+  .map-overlay {
+    padding: 0.25rem;
+  }
+
+  .map-container-with-sidebar {
+    max-width: 98vw;
+    max-height: 98vh;
+    border-radius: 8px;
+  }
+
+  .map-content {
+    min-height: 85vh;
+  }
+
+  .restaurant-sidebar {
+    width: 450px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .map-overlay {
+    padding: 0.125rem;
+  }
+
+  .map-container-with-sidebar {
+    max-width: 99vw;
+    max-height: 99vh;
+    border-radius: 6px;
+  }
+
+  .map-content {
+    min-height: 90vh;
+  }
+
+  .restaurant-sidebar {
+    width: 500px;
+  }
+}
+
+/* Menu Items with Incomplete Data */
+.menu-item.incomplete-data {
+  opacity: 0.7;
+  background-color: #1a1a1a;
+  border-color: #2d2d2d;
+}
+
+.menu-item.incomplete-data:hover {
+  border-color: #4b5563;
+  box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+}
+
+.menu-item.incomplete-data .menu-item-name,
+.menu-item.incomplete-data .menu-item-restaurant,
+.menu-item.incomplete-data .menu-item-description {
+  color: #9ca3af;
+}
+
+.incomplete-data-badge {
+  background-color: #7f1d1d;
+  color: #fecaca;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.price-unavailable {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.menu-item.incomplete-data .nutrition-main span {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  color: #9ca3af;
+}
+
+.menu-item.incomplete-data .calories,
+.menu-item.incomplete-data .protein,
+.menu-item.incomplete-data .carbs,
+.menu-item.incomplete-data .fat {
+  background-color: #2d2d2d !important;
+  border-color: #404040 !important;
+  color: #9ca3af !important;
 }

@@ -51,7 +51,7 @@ def extract_restaurants_via_apify(latitude, longitude):
             "personalDataOptions": "personal-data-to-be-excluded",
             "cacheBusting": False,
             "scrapePlaceDetails": True,
-            "maxImages": 100,  # 50 for now, 100 when its all working
+            "maxImages": 50,  # 50 for now, 100 when its all working
         }
 
         # Run the Actor and wait for it to finish
