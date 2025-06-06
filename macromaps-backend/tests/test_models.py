@@ -23,6 +23,7 @@ import json
 import time
 import base64
 import random
+import sys
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -32,6 +33,17 @@ import requests
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import menu processing pipeline components
+from tasks.menu_processing import MenuProcessor, run_menu_processing_pipeline
+from utils.llm_utils import (
+    classify_menu_image,
+    analyze_menu_image,
+    aggregate_menu_items,
+)
 
 # Load environment variables
 load_dotenv()
@@ -796,6 +808,282 @@ Provide your classification with detailed reasoning."""
 
         return "\n".join(report)
 
+    def test_pipeline_classification(
+        self, image_urls: List[str], models: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Test menu classification using the actual pipeline functions"""
+        if models is None:
+            models = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"]
+
+        results = []
+
+        for i, image_url in enumerate(image_urls):
+            print(
+                f"🔍 Testing pipeline classification {i+1}/{len(image_urls)}: {image_url[:50]}..."
+            )
+
+            image_results = []
+            for model in models:
+                try:
+                    start_time = time.time()
+
+                    # Use the actual pipeline classification function
+                    classification_result = classify_menu_image(image_url, model=model)
+
+                    response_time = time.time() - start_time
+
+                    image_results.append(
+                        {
+                            "model": model,
+                            "image_url": image_url,
+                            "response_time": response_time,
+                            "is_menu": classification_result.is_menu,
+                            "confidence": classification_result.confidence,
+                            "reasoning": classification_result.reasoning,
+                            "image_type": classification_result.image_type,
+                            "error": None,
+                        }
+                    )
+
+                    print(
+                        f"  ✅ {model}: {'MENU' if classification_result.is_menu else 'NOT MENU'} ({classification_result.confidence} confidence)"
+                    )
+
+                except Exception as e:
+                    print(f"  ❌ {model}: ERROR - {str(e)}")
+                    image_results.append(
+                        {
+                            "model": model,
+                            "image_url": image_url,
+                            "response_time": 0,
+                            "is_menu": False,
+                            "confidence": "low",
+                            "reasoning": f"Error: {str(e)}",
+                            "image_type": "error",
+                            "error": str(e),
+                        }
+                    )
+
+            results.append({"image_url": image_url, "results": image_results})
+
+        return results
+
+    def test_pipeline_analysis(
+        self, menu_image_urls: List[str], models: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Test menu analysis using the actual pipeline functions"""
+        if models is None:
+            models = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"]
+
+        results = []
+
+        for i, image_url in enumerate(menu_image_urls):
+            print(
+                f"🍽️ Testing pipeline analysis {i+1}/{len(menu_image_urls)}: {image_url[:50]}..."
+            )
+
+            image_results = []
+            for model in models:
+                try:
+                    start_time = time.time()
+
+                    # Use the actual pipeline analysis function
+                    analysis_result = analyze_menu_image(image_url, model=model)
+
+                    response_time = time.time() - start_time
+
+                    image_results.append(
+                        {
+                            "model": model,
+                            "image_url": image_url,
+                            "response_time": response_time,
+                            "menu_items": [
+                                item.dict() for item in analysis_result.menu_items
+                            ],
+                            "total_items": len(analysis_result.menu_items),
+                            "confidence": analysis_result.confidence,
+                            "error": None,
+                        }
+                    )
+
+                    print(
+                        f"  ✅ {model}: {len(analysis_result.menu_items)} items extracted ({analysis_result.confidence} confidence)"
+                    )
+
+                except Exception as e:
+                    print(f"  ❌ {model}: ERROR - {str(e)}")
+                    image_results.append(
+                        {
+                            "model": model,
+                            "image_url": image_url,
+                            "response_time": 0,
+                            "menu_items": [],
+                            "total_items": 0,
+                            "confidence": "low",
+                            "error": str(e),
+                        }
+                    )
+
+            results.append({"image_url": image_url, "results": image_results})
+
+        return results
+
+    def test_pipeline_aggregation(
+        self, menu_analyses: List[Dict], models: List[str] = None
+    ) -> Dict[str, Any]:
+        """Test menu aggregation using the actual pipeline functions"""
+        if models is None:
+            models = ["gpt-4.1"]  # Only test one model for aggregation
+
+        results = {}
+
+        for model in models:
+            try:
+                print(f"🔄 Testing pipeline aggregation with {model}...")
+                start_time = time.time()
+
+                # Convert menu analyses to the format expected by aggregate_menu_items
+                menu_items_list = []
+                for analysis in menu_analyses:
+                    for result in analysis["results"]:
+                        if result["model"] == model and not result["error"]:
+                            menu_items_list.extend(result["menu_items"])
+
+                if not menu_items_list:
+                    print(f"  ⚠️ No menu items to aggregate for {model}")
+                    continue
+
+                # Use the actual pipeline aggregation function
+                aggregated_result = aggregate_menu_items(menu_items_list, model=model)
+
+                response_time = time.time() - start_time
+
+                results[model] = {
+                    "response_time": response_time,
+                    "input_items": len(menu_items_list),
+                    "aggregated_items": [
+                        item.dict() for item in aggregated_result.menu_items
+                    ],
+                    "total_aggregated": len(aggregated_result.menu_items),
+                    "confidence": aggregated_result.confidence,
+                    "error": None,
+                }
+
+                print(
+                    f"  ✅ {model}: {len(menu_items_list)} → {len(aggregated_result.menu_items)} items ({aggregated_result.confidence} confidence)"
+                )
+
+            except Exception as e:
+                print(f"  ❌ {model}: ERROR - {str(e)}")
+                results[model] = {
+                    "response_time": 0,
+                    "input_items": 0,
+                    "aggregated_items": [],
+                    "total_aggregated": 0,
+                    "confidence": "low",
+                    "error": str(e),
+                }
+
+        return results
+
+    def run_full_pipeline_test(
+        self, json_file: str, image_count: int = 10
+    ) -> Dict[str, Any]:
+        """Run a complete pipeline test using random images from JSON file"""
+        print("🚀 Running full menu processing pipeline test...")
+        print("=" * 60)
+
+        # Load random images
+        image_urls = self.load_random_images_from_json(json_file, image_count)
+        print(f"Loaded {len(image_urls)} random images for testing")
+
+        # Step 1: Classification
+        print("\n📋 STEP 1: Menu Classification")
+        print("-" * 40)
+        classification_results = self.test_pipeline_classification(image_urls)
+
+        # Filter for menu images
+        menu_images = []
+        for result in classification_results:
+            for model_result in result["results"]:
+                if (
+                    model_result["model"] == "gpt-4.1"
+                    and model_result["is_menu"]
+                    and not model_result["error"]
+                ):
+                    menu_images.append(result["image_url"])
+                    break
+
+        print(
+            f"\n🍽️ Found {len(menu_images)} menu images out of {len(image_urls)} total images"
+        )
+
+        if not menu_images:
+            print(
+                "❌ No menu images found, cannot proceed with analysis and aggregation"
+            )
+            return {
+                "classification_results": classification_results,
+                "analysis_results": [],
+                "aggregation_results": {},
+                "summary": {
+                    "total_images": len(image_urls),
+                    "menu_images": 0,
+                    "total_items_extracted": 0,
+                    "final_aggregated_items": 0,
+                },
+            }
+
+        # Step 2: Analysis
+        print("\n🔍 STEP 2: Menu Analysis")
+        print("-" * 40)
+        analysis_results = self.test_pipeline_analysis(
+            menu_images[:5]
+        )  # Limit to 5 for testing
+
+        # Step 3: Aggregation
+        print("\n🔄 STEP 3: Menu Aggregation")
+        print("-" * 40)
+        aggregation_results = self.test_pipeline_aggregation(analysis_results)
+
+        # Generate summary
+        total_items_extracted = sum(
+            sum(
+                result["total_items"]
+                for result in analysis["results"]
+                if not result["error"]
+            )
+            for analysis in analysis_results
+        )
+
+        final_aggregated_items = sum(
+            result["total_aggregated"]
+            for result in aggregation_results.values()
+            if not result["error"]
+        )
+
+        summary = {
+            "total_images": len(image_urls),
+            "menu_images": len(menu_images),
+            "analyzed_images": len(analysis_results),
+            "total_items_extracted": total_items_extracted,
+            "final_aggregated_items": final_aggregated_items,
+        }
+
+        print(f"\n📊 PIPELINE TEST SUMMARY:")
+        print(f"   Total images tested: {summary['total_images']}")
+        print(f"   Images classified as menus: {summary['menu_images']}")
+        print(f"   Images analyzed: {summary['analyzed_images']}")
+        print(f"   Total menu items extracted: {summary['total_items_extracted']}")
+        print(f"   Final aggregated items: {summary['final_aggregated_items']}")
+
+        return {
+            "classification_results": classification_results,
+            "analysis_results": analysis_results,
+            "aggregation_results": aggregation_results,
+            "summary": summary,
+        }
+
 
 def main():
     """Main function to run the test"""
@@ -812,6 +1100,12 @@ def main():
         "-c",
         action="store_true",
         help="Run menu classification test using random images from example.json",
+    )
+    parser.add_argument(
+        "--pipeline_test",
+        "-p",
+        action="store_true",
+        help="Run full menu processing pipeline test (classification → analysis → aggregation)",
     )
     parser.add_argument(
         "--json_file",
@@ -835,17 +1129,18 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.image_url and not args.classification_test:
+    if not args.image_url and not args.classification_test and not args.pipeline_test:
         print(
-            "❌ Error: Must specify either --image_url for extraction test or --classification_test"
+            "❌ Error: Must specify one of --image_url, --classification_test, or --pipeline_test"
         )
         print("\nUsage examples:")
         print(
             "  Menu extraction:   python test_models.py --image_url 'https://example.com/menu.jpg'"
         )
         print("  Classification:    python test_models.py --classification_test")
+        print("  Pipeline test:     python test_models.py --pipeline_test")
         print(
-            "  Both tests:        python test_models.py --image_url 'https://example.com/menu.jpg' --classification_test"
+            "  Combined tests:    python test_models.py --image_url 'https://example.com/menu.jpg' --classification_test --pipeline_test"
         )
         return 1
 
@@ -855,6 +1150,7 @@ def main():
 
         extraction_results = None
         classification_results = None
+        pipeline_results = None
 
         # Run extraction test if image URL provided
         if args.image_url:
@@ -865,6 +1161,13 @@ def main():
         if args.classification_test:
             print("🎯 Running menu classification test...")
             classification_results = tester.run_classification_test(
+                args.json_file, args.image_count
+            )
+
+        # Run pipeline test if requested
+        if args.pipeline_test:
+            print("🚀 Running full pipeline test...")
+            pipeline_results = tester.run_full_pipeline_test(
                 args.json_file, args.image_count
             )
 
@@ -883,56 +1186,55 @@ def main():
         if not args.no_save:
             timestamp = int(time.time())
 
-            if extraction_results and classification_results:
-                # Combined results
-                combined_data = {
-                    "test_timestamp": time.time(),
-                    "extraction_results": [
-                        asdict(result) for result in extraction_results
-                    ],
-                    "classification_results": [
-                        [asdict(result) for result in image_results]
-                        for image_results in classification_results
-                    ],
-                }
-                output_file = args.output or f"combined_test_results_{timestamp}.json"
+            # Determine what data to save
+            save_data = {}
+            if extraction_results:
+                save_data["extraction_results"] = [
+                    asdict(result) for result in extraction_results
+                ]
+            if classification_results:
+                save_data["classification_results"] = [
+                    [asdict(result) for result in image_results]
+                    for image_results in classification_results
+                ]
+            if pipeline_results:
+                save_data["pipeline_results"] = pipeline_results
 
-            elif extraction_results:
-                # Extraction only
-                combined_data = {
-                    "test_timestamp": time.time(),
-                    "models_tested": len(extraction_results),
-                    "results": [asdict(result) for result in extraction_results],
-                }
-                output_file = (
-                    args.output or f"menu_extraction_test_results_{timestamp}.json"
-                )
+            if save_data:
+                save_data["test_timestamp"] = time.time()
 
-            elif classification_results:
-                # Classification only
-                combined_data = {
-                    "test_timestamp": time.time(),
-                    "images_tested": len(classification_results),
-                    "models_tested": len(tester.MODELS),
-                    "results": [
-                        [asdict(result) for result in image_results]
-                        for image_results in classification_results
-                    ],
-                }
-                output_file = (
-                    args.output or f"menu_classification_test_results_{timestamp}.json"
-                )
+                # Determine output filename
+                if args.output:
+                    output_file = args.output
+                elif len(save_data) > 2:  # More than just timestamp
+                    if pipeline_results:
+                        output_file = f"pipeline_test_results_{timestamp}.json"
+                    else:
+                        output_file = f"combined_test_results_{timestamp}.json"
+                elif extraction_results:
+                    output_file = f"menu_extraction_test_results_{timestamp}.json"
+                elif classification_results:
+                    output_file = f"menu_classification_test_results_{timestamp}.json"
+                else:
+                    output_file = f"test_results_{timestamp}.json"
 
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(combined_data, f, indent=2, ensure_ascii=False)
+                with open(output_file, "w", encoding="utf-8") as f:
+                    json.dump(save_data, f, indent=2, ensure_ascii=False)
 
-            print(f"\n💾 Detailed results saved to: {output_file}")
+                print(f"\n💾 Detailed results saved to: {output_file}")
 
-        total_tests = (len(extraction_results) if extraction_results else 0) + (
-            len(classification_results) * len(tester.MODELS)
-            if classification_results
-            else 0
-        )
+        # Calculate total tests run
+        total_tests = 0
+        if extraction_results:
+            total_tests += len(extraction_results)
+        if classification_results:
+            total_tests += len(classification_results) * len(tester.MODELS)
+        if pipeline_results:
+            # Count pipeline tests (classification + analysis + aggregation)
+            total_tests += len(pipeline_results.get("classification_results", []))
+            total_tests += len(pipeline_results.get("analysis_results", []))
+            total_tests += len(pipeline_results.get("aggregation_results", {}))
+
         print(f"\n🎉 Test completed! Ran {total_tests} total model tests.")
 
     except Exception as e:

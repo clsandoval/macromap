@@ -3,10 +3,7 @@ import os
 import json
 from pathlib import Path
 
-# Add the parent directory to the path so we can import from utils
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
-from utils.apify_utils import extract_restaurants_via_apify
+from utils import extract_restaurants_via_apify
 
 
 def test_apify_api_and_save_response():

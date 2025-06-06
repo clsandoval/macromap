@@ -2,7 +2,6 @@ import os
 import math
 from supabase import create_client, Client
 
-
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL", "your-supabase-url-here")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "your-supabase-key-here")
