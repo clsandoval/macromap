@@ -569,6 +569,11 @@ class MenuProcessor:
                     "calories": (
                         int(item.get("calories")) if item.get("calories") else None
                     ),
+                    "serving_size": (
+                        float(item.get("serving_size"))
+                        if item.get("serving_size")
+                        else None
+                    ),
                     "protein": (
                         float(item.get("protein")) if item.get("protein") else None
                     ),

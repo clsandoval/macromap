@@ -27,6 +27,7 @@ class MenuItem(BaseModel):
     price: Optional[float] = None
     category: Optional[str] = None
     calories: Optional[int] = None
+    serving_size: Optional[float] = None  # in grams
     protein: Optional[float] = None
     carbs: Optional[float] = None
     fat: Optional[float] = None
@@ -188,15 +189,17 @@ IMPORTANT: Always extract prices as numbers only (no currency symbols), but cons
                     - price: Numerical price if visible (just the number, no currency symbols)
                     - category: Category like "appetizers", "mains", "desserts", "beverages", etc.
                     - calories: Estimated calories if you can reasonably estimate
+                    - serving_size: Estimated serving size in grams if you can reasonably estimate
                     - protein: Estimated protein in grams if you can reasonably estimate
                     - carbs: Estimated carbohydrates in grams if you can reasonably estimate  
                     - fat: Estimated fat in grams if you can reasonably estimate
                     
                     For nutritional estimates:
                     - Only provide estimates if you're reasonably confident
-                    - Base estimates on typical portions for that type of food
+                    - Base estimates on typical restaurant portions for that type of food
                     - Consider cooking methods (fried vs grilled, etc.)
                     - Consider local/regional food preparation styles based on location
+                    - For serving_size, estimate the total weight of the dish as typically served
                     - Don't guess wildly - it's better to leave null than to be very wrong
                     
                     Extract all visible items even if information is incomplete.{location_context}{restaurant_context}
@@ -229,6 +232,7 @@ IMPORTANT: Always extract prices as numbers only (no currency symbols), but cons
                     "price": item.price,
                     "category": item.category,
                     "calories": item.calories,
+                    "serving_size": item.serving_size,
                     "protein": item.protein,
                     "carbs": item.carbs,
                     "fat": item.fat,
@@ -252,107 +256,6 @@ IMPORTANT: Always extract prices as numbers only (no currency symbols), but cons
             "has_descriptions": False,
             "error": str(e),
         }
-
-
-def _get_location_context(latitude: float, longitude: float) -> str:
-    """
-    Generate location context hints based on coordinates
-
-    Args:
-        latitude: Latitude coordinate
-        longitude: Longitude coordinate
-
-    Returns:
-        String with location context and currency hints
-    """
-    try:
-        # Basic geographic regions and their typical currencies
-        location_hints = []
-
-        # Southeast Asia
-        if 1.0 <= latitude <= 25.0 and 95.0 <= longitude <= 141.0:
-            if 14.0 <= latitude <= 19.0 and 120.0 <= longitude <= 127.0:
-                location_hints.append(
-                    "This appears to be in the Philippines. Expected currency: Philippine Peso (PHP)."
-                )
-                location_hints.append(
-                    "Typical price range: PHP 150-500 for main dishes, PHP 50-150 for appetizers."
-                )
-            elif 1.2 <= latitude <= 1.5 and 103.6 <= longitude <= 104.0:
-                location_hints.append(
-                    "This appears to be in Singapore. Expected currency: Singapore Dollar (SGD)."
-                )
-                location_hints.append(
-                    "Typical price range: SGD 15-35 for main dishes, SGD 8-18 for appetizers."
-                )
-            elif 13.7 <= latitude <= 13.8 and 100.4 <= longitude <= 100.6:
-                location_hints.append(
-                    "This appears to be in Bangkok, Thailand. Expected currency: Thai Baht (THB)."
-                )
-                location_hints.append(
-                    "Typical price range: THB 200-600 for main dishes, THB 100-300 for appetizers."
-                )
-            else:
-                location_hints.append(
-                    "This appears to be in Southeast Asia. Common currencies: PHP, SGD, THB, MYR, IDR."
-                )
-
-        # United States
-        elif 25.0 <= latitude <= 49.0 and -125.0 <= longitude <= -66.0:
-            location_hints.append(
-                "This appears to be in the United States. Expected currency: US Dollar (USD)."
-            )
-            location_hints.append(
-                "Typical price range: $12-35 for main dishes, $6-18 for appetizers."
-            )
-
-        # Europe
-        elif 35.0 <= latitude <= 71.0 and -10.0 <= longitude <= 40.0:
-            location_hints.append(
-                "This appears to be in Europe. Expected currency: Euro (EUR) or local currency."
-            )
-            location_hints.append(
-                "Typical price range: €10-30 for main dishes, €5-15 for appetizers."
-            )
-
-        # East Asia
-        elif 20.0 <= latitude <= 50.0 and 100.0 <= longitude <= 145.0:
-            if 35.0 <= latitude <= 36.0 and 139.0 <= longitude <= 140.0:
-                location_hints.append(
-                    "This appears to be in Tokyo, Japan. Expected currency: Japanese Yen (JPY)."
-                )
-                location_hints.append(
-                    "Typical price range: ¥1000-3000 for main dishes, ¥500-1500 for appetizers."
-                )
-            else:
-                location_hints.append(
-                    "This appears to be in East Asia. Common currencies: JPY, KRW, CNY."
-                )
-
-        # Australia/Oceania
-        elif -45.0 <= latitude <= -10.0 and 110.0 <= longitude <= 180.0:
-            location_hints.append(
-                "This appears to be in Australia/Oceania. Expected currency: Australian Dollar (AUD)."
-            )
-            location_hints.append(
-                "Typical price range: AUD 18-40 for main dishes, AUD 10-20 for appetizers."
-            )
-
-        # Default fallback
-        else:
-            location_hints.append(
-                "Geographic location detected. Please determine appropriate local currency from the menu context."
-            )
-
-        location_hints.append(
-            "Consider local cuisine styles, portion sizes, and economic factors when estimating nutritional values."
-        )
-
-        return " ".join(location_hints)
-
-    except Exception as e:
-        logger.warning(f"Error generating location context: {str(e)}")
-        return "Please determine appropriate currency and local context from the menu image."
 
 
 def aggregate_menu_items(
@@ -391,12 +294,10 @@ def aggregate_menu_items(
         # Build location context for the prompt
         location_context = ""
         if latitude is not None and longitude is not None:
-            location_hints = _get_location_context(latitude, longitude)
             location_context = f"""
 
 LOCATION CONTEXT:
 This restaurant is located at coordinates {latitude:.4f}, {longitude:.4f}.
-{location_hints}
 Use this location information when consolidating to ensure consistent local currency context and regional food preferences."""
 
         restaurant_context = ""
@@ -437,7 +338,7 @@ Return a clean, deduplicated list with the best information for each unique menu
                 },
             ],
             response_format=AggregatedMenu,
-            max_tokens=3000,
+            max_tokens=5000,
         )
 
         parsed_result = response.choices[0].message.parsed
@@ -452,6 +353,7 @@ Return a clean, deduplicated list with the best information for each unique menu
                     "price": item.price,
                     "category": item.category,
                     "calories": item.calories,
+                    "serving_size": item.serving_size,
                     "protein": item.protein,
                     "carbs": item.carbs,
                     "fat": item.fat,
