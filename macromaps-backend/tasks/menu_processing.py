@@ -50,6 +50,62 @@ def calculate_estimated_cost(tokens_used: int, model: str) -> float:
     return round(estimated_cost, 10)  # Round to 10 decimal places for precision
 
 
+def validate_nutritional_value(
+    value: float, max_value: float = 99999.99
+) -> Optional[float]:
+    """
+    Validate and cap nutritional values to prevent database overflow
+
+    Args:
+        value: The nutritional value to validate
+        max_value: Maximum allowed value (default 99999.99 for DECIMAL(7,2))
+
+    Returns:
+        Validated value capped at max_value, or None if invalid
+    """
+    if value is None:
+        return None
+
+    try:
+        # Convert to float and ensure it's positive
+        float_value = float(value)
+        if float_value < 0:
+            return None
+
+        # Cap at maximum allowed value
+        return min(float_value, max_value)
+    except (ValueError, TypeError):
+        return None
+
+
+def validate_integer_nutritional_value(
+    value: int, max_value: int = 99999
+) -> Optional[int]:
+    """
+    Validate and cap integer nutritional values (like calories) to prevent database overflow
+
+    Args:
+        value: The nutritional value to validate
+        max_value: Maximum allowed value (default 99999 for INTEGER)
+
+    Returns:
+        Validated integer value capped at max_value, or None if invalid
+    """
+    if value is None:
+        return None
+
+    try:
+        # Convert to int and ensure it's positive
+        int_value = int(float(value))  # Convert float to int if needed
+        if int_value < 0:
+            return None
+
+        # Cap at maximum allowed value
+        return min(int_value, max_value)
+    except (ValueError, TypeError):
+        return None
+
+
 @dataclass
 class ImageClassificationResult:
     """Result of menu image classification"""
@@ -564,24 +620,20 @@ class MenuProcessor:
                     "name": item.get("name", ""),
                     "description": item.get("description", ""),
                     "price": float(item.get("price")) if item.get("price") else None,
-                    "currency": item.get("currency", "USD"),
+                    "currency": item.get("currency"),
                     # Nutritional Information
-                    "calories": (
-                        int(item.get("calories")) if item.get("calories") else None
+                    "calories": validate_integer_nutritional_value(
+                        item.get("calories")
                     ),
-                    "serving_size": (
-                        float(item.get("serving_size"))
-                        if item.get("serving_size")
-                        else None
+                    "serving_size": validate_nutritional_value(
+                        item.get("serving_size")
                     ),
-                    "protein": (
-                        float(item.get("protein")) if item.get("protein") else None
-                    ),
-                    "carbs": float(item.get("carbs")) if item.get("carbs") else None,
-                    "fat": float(item.get("fat")) if item.get("fat") else None,
-                    "fiber": float(item.get("fiber")) if item.get("fiber") else None,
-                    "sugar": float(item.get("sugar")) if item.get("sugar") else None,
-                    "sodium": float(item.get("sodium")) if item.get("sodium") else None,
+                    "protein": validate_nutritional_value(item.get("protein")),
+                    "carbs": validate_nutritional_value(item.get("carbs")),
+                    "fat": validate_nutritional_value(item.get("fat")),
+                    "fiber": validate_nutritional_value(item.get("fiber")),
+                    "sugar": validate_nutritional_value(item.get("sugar")),
+                    "sodium": validate_nutritional_value(item.get("sodium")),
                     # Dietary Classifications
                     "dietary_tags": item.get("dietary_tags", []),
                     "allergens": item.get("allergens", []),

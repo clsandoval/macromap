@@ -413,7 +413,7 @@ CREATE TABLE menu_items (
     name VARCHAR(300) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2),
-    currency VARCHAR(3) DEFAULT 'USD',
+    currency VARCHAR(3),
     
     -- Nutritional Information (LLM Generated)
     calories INTEGER,

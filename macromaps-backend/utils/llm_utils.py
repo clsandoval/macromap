@@ -25,6 +25,7 @@ class MenuItem(BaseModel):
     name: str
     description: Optional[str] = None
     price: Optional[float] = None
+    currency: Optional[str] = None
     category: Optional[str] = None
     calories: Optional[int] = None
     serving_size: Optional[float] = None  # in grams
@@ -157,17 +158,14 @@ def analyze_menu_image(
         location_context = ""
         if latitude is not None and longitude is not None:
             # Determine approximate location/country from coordinates for currency context
-            location_hints = _get_location_context(latitude, longitude)
             location_context = f"""
             
 LOCATION CONTEXT:
 This menu is from a restaurant located at coordinates {latitude:.4f}, {longitude:.4f}.
-{location_hints}
 Please use this location information to:
 1. Determine the appropriate LOCAL CURRENCY for prices (USD, EUR, PHP, SGD, etc.)
 2. Consider local food culture and typical portion sizes
 3. Adjust nutritional estimates based on regional cooking styles
-4. Use location-appropriate price formatting (e.g., PHP 250.00 for Philippines, $15.99 for USA)
 
 IMPORTANT: Always extract prices as numbers only (no currency symbols), but consider the local currency when evaluating if prices seem reasonable."""
 
@@ -187,6 +185,7 @@ IMPORTANT: Always extract prices as numbers only (no currency symbols), but cons
                     - name: The item name (required)
                     - description: Brief description if available
                     - price: Numerical price if visible (just the number, no currency symbols)
+                    - currency: Currency code (e.g., "USD", "EUR", "GBP") if you can determine it from context
                     - category: Category like "appetizers", "mains", "desserts", "beverages", etc.
                     - calories: Estimated calories if you can reasonably estimate
                     - serving_size: Estimated serving size in grams if you can reasonably estimate
@@ -230,6 +229,7 @@ IMPORTANT: Always extract prices as numbers only (no currency symbols), but cons
                     "name": item.name,
                     "description": item.description,
                     "price": item.price,
+                    "currency": item.currency,
                     "category": item.category,
                     "calories": item.calories,
                     "serving_size": item.serving_size,
@@ -351,6 +351,7 @@ Return a clean, deduplicated list with the best information for each unique menu
                     "name": item.name,
                     "description": item.description,
                     "price": item.price,
+                    "currency": item.currency,
                     "category": item.category,
                     "calories": item.calories,
                     "serving_size": item.serving_size,
