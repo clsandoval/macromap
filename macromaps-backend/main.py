@@ -78,7 +78,7 @@ def scan_nearby():
         latitude = data["latitude"]
         longitude = data["longitude"]
         mock_mode = data.get("mock", False)  # Check for mock flag
-        radius_km = data.get("radius", 5.0)  # Default 5km radius
+        radius_km = data.get("radius", 1.0)  # Default 5km radius
 
         # Handle mock mode
         if mock_mode:

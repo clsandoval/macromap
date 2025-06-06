@@ -34,7 +34,7 @@ def extract_restaurants_via_apify(latitude, longitude):
         run_input = {
             "searchStringsArray": ["restaurants"],
             "customGeolocation": custom_geolocation,
-            "maxCrawledPlacesPerSearch": 5,
+            "maxCrawledPlacesPerSearch": 10,
             "language": "en",
             "skipClosedPlaces": False,
             "exportPlaceUrls": False,
@@ -50,7 +50,8 @@ def extract_restaurants_via_apify(latitude, longitude):
             "reviewsTranslation": "originalAndTranslated",
             "personalDataOptions": "personal-data-to-be-excluded",
             "cacheBusting": False,
-            "maxImages": 50,  # 50 for now, 100 when its all working
+            "scrapePlaceDetails": True,
+            "maxImages": 100,  # 50 for now, 100 when its all working
         }
 
         # Run the Actor and wait for it to finish
