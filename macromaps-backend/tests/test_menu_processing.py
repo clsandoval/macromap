@@ -345,57 +345,212 @@ def test_menu_analysis(classification_results):
 
 
 def test_end_to_end_processing():
-    """Test the complete end-to-end processing pipeline"""
+    """Test the complete end-to-end processing pipeline with real restaurant data"""
     print("\n" + "=" * 60)
-    print("TESTING END-TO-END PROCESSING")
+    print("TESTING END-TO-END PROCESSING WITH REAL DATA")
     print("=" * 60)
 
-    # Use a sample restaurant place ID from the test data
+    # Specific restaurant place ID to test
+    test_place_id = "ChIJH8DHxfXJlzMRAxuzFqd3S68"
+    print(f"🏪 Testing with restaurant place ID: {test_place_id}")
+
     try:
-        with open("tests/example.json", "r") as f:
-            data = json.load(f)
-
-        if not data.get("restaurants"):
-            print("❌ No restaurants found in example.json")
-            return
-
-        # Get the first restaurant for testing
-        test_restaurant = data["restaurants"][0]
-        place_id = test_restaurant.get("placeId", "")
-        restaurant_name = test_restaurant.get("name", "")
-
-        if not place_id:
-            print("❌ No place_id found for test restaurant")
-            return
-
-        print(f"🏪 Testing with restaurant: {restaurant_name}")
-        print(f"🆔 Place ID: {place_id}")
-
-        # Note: This would normally pull from Supabase, but for testing we'll simulate
-        print("\n⚠️  NOTE: End-to-end testing requires restaurant data in Supabase")
-        print(
-            "   This test demonstrates the workflow but won't execute without proper DB setup"
+        # First, check if the restaurant exists in our database
+        restaurant_response = (
+            supabase.table("restaurants")
+            .select("id, name, place_id, image_urls, images, status")
+            .eq("place_id", test_place_id)
+            .execute()
         )
 
-        # Show what the pipeline would do
+        if not restaurant_response.data:
+            print(f"❌ Restaurant with place_id {test_place_id} not found in database")
+            print(
+                "   Please ensure the restaurant data has been uploaded to Supabase first"
+            )
+            return None
+
+        restaurant_data = restaurant_response.data[0]
+        restaurant_name = restaurant_data.get("name", "Unknown")
+        restaurant_id = restaurant_data["id"]
+        current_status = restaurant_data.get("status", "unknown")
+
+        print(f"✅ Found restaurant: {restaurant_name}")
+        print(f"🆔 Restaurant ID: {restaurant_id}")
+        print(f"📊 Current status: {current_status}")
+
+        # Check available images
+        image_urls = restaurant_data.get("image_urls", [])
+        images_json = restaurant_data.get("images")
+
+        total_images = len(image_urls)
+        if images_json and isinstance(images_json, dict) and "items" in images_json:
+            total_images += len(images_json["items"])
+        elif images_json and isinstance(images_json, list):
+            total_images += len(images_json)
+
+        print(f"📸 Total images available: {total_images}")
+
+        if total_images == 0:
+            print("❌ No images found for this restaurant")
+            return None
+
+        if total_images < 20:
+            print(f"⚠️  Only {total_images} images available (requested 20)")
+            print("   Will process all available images")
+
+        # Initialize MenuProcessor with production settings
         processor = MenuProcessor(
-            max_workers=5, classification_workers=2, analysis_workers=2
+            max_workers=5, classification_workers=3, analysis_workers=2
         )
 
-        print(f"\n📊 Processor configuration:")
+        print(f"\n🔧 Processor Configuration:")
         print(f"   • Max workers: {processor.max_workers}")
         print(f"   • Classification workers: {processor.classification_workers}")
         print(f"   • Analysis workers: {processor.analysis_workers}")
 
-        print(f"\n🔄 Would process: {place_id}")
-        print("   1. Retrieve images from Supabase")
-        print("   2. Classify images in parallel")
-        print("   3. Analyze menu images in parallel")
-        print("   4. Aggregate menu items")
-        print("   5. Save results to Supabase")
+        # Reset restaurant status to pending for fresh test
+        print(f"\n🔄 Resetting restaurant status to 'pending' for test...")
+        supabase.table("restaurants").update({"status": "pending"}).eq(
+            "place_id", test_place_id
+        ).execute()
+
+        # Clear any existing menu items for this restaurant
+        print("🧹 Clearing existing menu items...")
+        supabase.table("menu_items").delete().eq(
+            "restaurant_id", restaurant_id
+        ).execute()
+
+        # Clear existing processing logs for this restaurant
+        print("🧹 Clearing existing processing logs...")
+        supabase.table("image_processing_log").delete().eq(
+            "restaurant_id", restaurant_id
+        ).execute()
+        supabase.table("processing_queue").delete().eq(
+            "restaurant_id", restaurant_id
+        ).execute()
+
+        print(f"\n🚀 Starting end-to-end processing...")
+        start_time = time.time()
+
+        # Process the restaurant using the actual MenuProcessor
+        result = processor.process_restaurant_images(test_place_id)
+
+        processing_time = time.time() - start_time
+
+        print(f"\n📋 PROCESSING RESULTS:")
+        print(f"   • Processing time: {processing_time:.2f} seconds")
+        print(f"   • Total images processed: {result.total_images}")
+        print(f"   • Menu images found: {result.menu_images_found}")
+        print(f"   • Menu items extracted: {result.total_menu_items}")
+
+        if result.error:
+            print(f"   • Error: {result.error}")
+        else:
+            print(f"   • Status: ✅ SUCCESS")
+
+        # Verify the results in the database
+        print(f"\n🔍 VERIFYING DATABASE RESULTS:")
+
+        # Check restaurant status
+        final_restaurant = (
+            supabase.table("restaurants")
+            .select("status")
+            .eq("place_id", test_place_id)
+            .execute()
+        )
+        final_status = (
+            final_restaurant.data[0]["status"] if final_restaurant.data else "unknown"
+        )
+        print(f"   • Final restaurant status: {final_status}")
+
+        # Check menu items
+        menu_items_response = (
+            supabase.table("menu_items")
+            .select("*")
+            .eq("restaurant_id", restaurant_id)
+            .execute()
+        )
+        menu_items_count = (
+            len(menu_items_response.data) if menu_items_response.data else 0
+        )
+        print(f"   • Menu items in database: {menu_items_count}")
+
+        # Check image processing logs
+        logs_response = (
+            supabase.table("image_processing_log")
+            .select("*")
+            .eq("restaurant_id", restaurant_id)
+            .execute()
+        )
+        logs_count = len(logs_response.data) if logs_response.data else 0
+        menu_logs_count = (
+            len([log for log in logs_response.data if log.get("is_menu_image")])
+            if logs_response.data
+            else 0
+        )
+        print(
+            f"   • Image processing logs: {logs_count} total, {menu_logs_count} menu images"
+        )
+
+        # Check processing queue
+        queue_response = (
+            supabase.table("processing_queue")
+            .select("*")
+            .eq("restaurant_id", restaurant_id)
+            .execute()
+        )
+        queue_status = (
+            queue_response.data[0]["status"] if queue_response.data else "not found"
+        )
+        print(f"   • Processing queue status: {queue_status}")
+
+        # Show sample menu items if any were extracted
+        if menu_items_response.data:
+            print(f"\n🍽️  SAMPLE MENU ITEMS:")
+            for i, item in enumerate(menu_items_response.data[:5], 1):
+                name = item.get("name", "No name")
+                price = item.get("price", "No price")
+                category = item.get("category", "No category")
+                calories = item.get("calories", "")
+
+                print(f"   {i}. {name}")
+                print(f"      💰 Price: {price}")
+                print(f"      🏷️  Category: {category}")
+                if calories:
+                    print(f"      🔥 Calories: {calories}")
+                print()
+
+        # Performance metrics
+        if result.total_images > 0:
+            avg_time_per_image = processing_time / result.total_images
+            print(f"\n⚡ PERFORMANCE METRICS:")
+            print(f"   • Average time per image: {avg_time_per_image:.2f}s")
+            print(
+                f"   • Menu detection rate: {(result.menu_images_found/result.total_images)*100:.1f}%"
+            )
+            if result.menu_images_found > 0:
+                print(
+                    f"   • Items per menu image: {result.total_menu_items/result.menu_images_found:.1f}"
+                )
+
+        return {
+            "place_id": test_place_id,
+            "restaurant_name": restaurant_name,
+            "processing_time": processing_time,
+            "result": result,
+            "final_status": final_status,
+            "menu_items_count": menu_items_count,
+            "logs_count": logs_count,
+            "menu_logs_count": menu_logs_count,
+        }
 
     except Exception as e:
-        print(f"❌ Error in end-to-end test: {str(e)}")
+        print(f"❌ Exception occurred during end-to-end test: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        return None
 
 
 def print_summary(classification_results, analysis_results):
@@ -507,34 +662,76 @@ def main():
     """Main test function"""
     print("🧪 MENU PROCESSING PIPELINE TEST")
     print("=" * 60)
-    print("Testing menu image classification and analysis against example.json data")
+    print("Testing real end-to-end menu processing with Supabase integration")
 
-    # Load test data
-    all_images = load_example_data()
-    if not all_images:
-        print("❌ No test data available. Exiting.")
-        return
+    # Test the real end-to-end processing first
+    end_to_end_result = test_end_to_end_processing()
 
-    # Select random images for testing
-    test_images = select_random_images(all_images, 10)
-    print(f"\n🎯 Selected {len(test_images)} random images for testing")
+    if end_to_end_result:
+        print(f"\n✅ END-TO-END TEST COMPLETED SUCCESSFULLY!")
+        print(f"Restaurant: {end_to_end_result['restaurant_name']}")
+        print(f"Processing time: {end_to_end_result['processing_time']:.2f}s")
+        print(f"Menu items extracted: {end_to_end_result['menu_items_count']}")
 
-    # Test image classification
-    classification_results = test_image_classification(test_images)
+        # Offer to run additional example.json tests
+        print(f"\n" + "=" * 60)
+        print("OPTIONAL: Additional tests with example.json images")
+        print("=" * 60)
 
-    # Test menu analysis on classified menu images
-    analysis_results = test_menu_analysis(classification_results)
+        try:
+            # Try to load example data for additional testing
+            all_images = load_example_data()
+            if all_images:
+                print(f"📋 Found {len(all_images)} images in example.json")
+                print("Running additional classification and analysis tests...")
 
-    # Test end-to-end processing (conceptual)
-    test_end_to_end_processing()
+                # Select random images for additional testing
+                test_images = select_random_images(all_images, 10)
+                print(
+                    f"🎯 Selected {len(test_images)} random images for additional testing"
+                )
 
-    # Print summary
-    print_summary(classification_results, analysis_results)
+                # Test image classification
+                classification_results = test_image_classification(test_images)
+
+                # Test menu analysis on classified menu images
+                analysis_results = test_menu_analysis(classification_results)
+
+                # Print summary of additional tests
+                print_summary(classification_results, analysis_results)
+            else:
+                print("⚠️  No example.json data found, skipping additional tests")
+
+        except Exception as e:
+            print(f"⚠️  Could not run additional example.json tests: {str(e)}")
+            print("   This is not critical - the main end-to-end test was successful")
+
+    else:
+        print(f"\n❌ END-TO-END TEST FAILED")
+        print("Falling back to example.json testing...")
+
+        # Fallback to example.json tests if end-to-end fails
+        all_images = load_example_data()
+        if not all_images:
+            print("❌ No test data available. Exiting.")
+            return
+
+        # Select random images for testing
+        test_images = select_random_images(all_images, 10)
+        print(f"\n🎯 Selected {len(test_images)} random images for testing")
+
+        # Test image classification
+        classification_results = test_image_classification(test_images)
+
+        # Test menu analysis on classified menu images
+        analysis_results = test_menu_analysis(classification_results)
+
+        # Print summary
+        print_summary(classification_results, analysis_results)
 
     print(f"\n✅ Testing complete!")
-    print(
-        f"💡 To run full end-to-end tests, ensure your Supabase tables are set up correctly."
-    )
+    print(f"💡 The end-to-end test uses real Supabase data and MenuProcessor pipeline.")
+    print(f"💡 Ensure restaurant data is uploaded to Supabase for full functionality.")
 
 
 if __name__ == "__main__":

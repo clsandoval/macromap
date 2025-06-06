@@ -18,6 +18,37 @@ from utils.llm_utils import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Model pricing per 1 million tokens (in USD)
+MODEL_PRICING = {
+    "gpt-4.1": 2.00,
+    "gpt-4.1-mini": 0.40,
+    "gpt-4.1-nano": 0.10,
+    "gpt-4o": 2.00,  # Default fallback
+}
+
+
+def calculate_estimated_cost(tokens_used: int, model: str) -> float:
+    """
+    Calculate estimated cost based on token usage and model pricing
+
+    Args:
+        tokens_used: Number of tokens used
+        model: Model name (e.g., "gpt-4.1-nano")
+
+    Returns:
+        Estimated cost in USD
+    """
+    if not tokens_used or tokens_used <= 0:
+        return 0.0
+
+    # Get cost per 1M tokens, default to gpt-4o pricing if model not found
+    cost_per_1m = MODEL_PRICING.get(model, MODEL_PRICING["gpt-4o"])
+
+    # Calculate cost: (tokens_used / 1,000,000) * cost_per_1m
+    estimated_cost = (tokens_used / 1_000_000) * cost_per_1m
+
+    return round(estimated_cost, 10)  # Round to 10 decimal places for precision
+
 
 @dataclass
 class ImageClassificationResult:
@@ -28,6 +59,9 @@ class ImageClassificationResult:
     confidence_level: str
     reasoning: str
     image_type: str
+    tokens_used: int = 0
+    model_used: str = ""
+    estimated_cost: float = 0.0
     error: Optional[str] = None
 
 
@@ -37,6 +71,9 @@ class MenuAnalysisResult:
 
     image_url: str
     menu_items: List[Dict]
+    tokens_used: int = 0
+    model_used: str = ""
+    estimated_cost: float = 0.0
     error: Optional[str] = None
 
 
@@ -157,8 +194,15 @@ class MenuProcessor:
         try:
             logger.info(f"Classifying image: {image_url}")
 
+            # Specify the model to use
+            model = "gpt-4.1-nano"
+
             # Call LLM classification function
-            classification = classify_menu_image(image_url, model="gpt-4.1-nano")
+            classification = classify_menu_image(image_url, model=model)
+
+            # Get tokens used and calculate cost
+            tokens_used = classification.get("tokens_used", 0)
+            estimated_cost = calculate_estimated_cost(tokens_used, model)
 
             return ImageClassificationResult(
                 image_url=image_url,
@@ -166,6 +210,9 @@ class MenuProcessor:
                 confidence_level=classification.get("confidence_level", "low"),
                 reasoning=classification.get("reasoning", ""),
                 image_type=classification.get("image_type", "unknown"),
+                tokens_used=tokens_used,
+                model_used=model,
+                estimated_cost=estimated_cost,
             )
 
         except Exception as e:
@@ -176,6 +223,9 @@ class MenuProcessor:
                 confidence_level="low",
                 reasoning="",
                 image_type="unknown",
+                tokens_used=0,
+                model_used="gpt-4.1-nano",
+                estimated_cost=0.0,
                 error=str(e),
             )
 
@@ -192,16 +242,34 @@ class MenuProcessor:
         try:
             logger.info(f"Analyzing menu image: {image_url}")
 
+            # Specify the model to use for analysis (can be different from classification)
+            model = "gpt-4.1"  # Use higher quality model for menu analysis
+
             # Call LLM analysis function
-            analysis = analyze_menu_image(image_url)
+            analysis = analyze_menu_image(image_url, model=model)
+
+            # Get tokens used and calculate cost
+            tokens_used = analysis.get("tokens_used", 0)
+            estimated_cost = calculate_estimated_cost(tokens_used, model)
 
             return MenuAnalysisResult(
-                image_url=image_url, menu_items=analysis.get("menu_items", [])
+                image_url=image_url,
+                menu_items=analysis.get("menu_items", []),
+                tokens_used=tokens_used,
+                model_used=model,
+                estimated_cost=estimated_cost,
             )
 
         except Exception as e:
             logger.error(f"Error analyzing menu image {image_url}: {str(e)}")
-            return MenuAnalysisResult(image_url=image_url, menu_items=[], error=str(e))
+            return MenuAnalysisResult(
+                image_url=image_url,
+                menu_items=[],
+                tokens_used=0,
+                model_used="gpt-4.1",
+                estimated_cost=0.0,
+                error=str(e),
+            )
 
     def process_restaurant_images(self, place_id: str) -> RestaurantProcessingResult:
         """
@@ -290,6 +358,9 @@ class MenuProcessor:
                         is_menu=result.is_menu,
                         confidence=confidence,
                         status="completed" if not result.error else "failed",
+                        extracted_items_count=0,
+                        tokens_used=result.tokens_used,
+                        estimated_cost=result.estimated_cost,
                     )
 
             # Step 2: Filter menu images and analyze them in parallel
@@ -326,12 +397,38 @@ class MenuProcessor:
                     if not result.error:
                         analysis_results.append(result)
 
-                        # Update log with extracted items count
-                        supabase.table("image_processing_log").update(
-                            {"extracted_items_count": len(result.menu_items)}
-                        ).eq("restaurant_id", restaurant_id).eq(
-                            "image_url", result.image_url
-                        ).execute()
+                        # Update log with extracted items count, tokens, and cost
+                        try:
+                            supabase.table("image_processing_log").update(
+                                {
+                                    "extracted_items_count": len(result.menu_items),
+                                    "image_token_count": result.tokens_used,
+                                    "estimated_cost": result.estimated_cost,  # Use calculated cost
+                                }
+                            ).eq("restaurant_id", restaurant_id).eq(
+                                "image_url", result.image_url
+                            ).execute()
+                        except Exception as e:
+                            logger.error(
+                                f"Error updating image processing log for {result.image_url}: {str(e)}"
+                            )
+                    else:
+                        # Log analysis failure
+                        try:
+                            supabase.table("image_processing_log").update(
+                                {
+                                    "processing_status": "failed",
+                                    "extracted_items_count": 0,
+                                    "image_token_count": result.tokens_used,
+                                    "estimated_cost": result.estimated_cost,  # Use calculated cost
+                                }
+                            ).eq("restaurant_id", restaurant_id).eq(
+                                "image_url", result.image_url
+                            ).execute()
+                        except Exception as e:
+                            logger.error(
+                                f"Error updating failed analysis log for {result.image_url}: {str(e)}"
+                            )
 
             # Step 4: Aggregate all menu items
             all_menu_items = []
@@ -350,6 +447,12 @@ class MenuProcessor:
 
                 if success:
                     self.update_processing_queue_status(restaurant_id, "completed")
+
+                    # Log processing summary with costs and tokens
+                    processing_summary = self.log_restaurant_processing_summary(
+                        restaurant_id, place_id
+                    )
+
                     logger.info(
                         f"Successfully processed restaurant {place_id}: {len(final_menu_items)} menu items saved"
                     )
@@ -617,6 +720,8 @@ class MenuProcessor:
         confidence: float,
         status: str,
         extracted_items_count: int = 0,
+        tokens_used: int = 0,
+        estimated_cost: float = 0.0,
     ) -> bool:
         """
         Log image processing results to the image_processing_log table
@@ -628,6 +733,8 @@ class MenuProcessor:
             confidence: Classification confidence (0.00-1.00)
             status: Processing status (pending, processing, completed, failed)
             extracted_items_count: Number of items extracted from this image
+            tokens_used: Number of tokens used for processing this image
+            estimated_cost: Estimated cost in USD for processing this image
 
         Returns:
             Success boolean
@@ -642,6 +749,8 @@ class MenuProcessor:
                 ),  # Ensure 0-1 range
                 "processing_status": status,
                 "extracted_items_count": extracted_items_count,
+                "image_token_count": tokens_used,
+                "estimated_cost": estimated_cost,  # Already rounded in calculate_estimated_cost
             }
 
             response = (
@@ -725,6 +834,81 @@ class MenuProcessor:
                 f"Error updating processing queue for restaurant {restaurant_id}: {str(e)}"
             )
             return False
+
+    def log_restaurant_processing_summary(
+        self, restaurant_id: str, place_id: str
+    ) -> Dict[str, float]:
+        """
+        Calculate and log summary statistics for restaurant processing
+
+        Args:
+            restaurant_id: Restaurant UUID
+            place_id: Restaurant place ID for logging
+
+        Returns:
+            Dictionary with processing statistics
+        """
+        try:
+            # Get all processing logs for this restaurant
+            logs_response = (
+                supabase.table("image_processing_log")
+                .select(
+                    "image_token_count, estimated_cost, is_menu_image, extracted_items_count"
+                )
+                .eq("restaurant_id", restaurant_id)
+                .execute()
+            )
+
+            if not logs_response.data:
+                return {}
+
+            # Calculate totals
+            total_tokens = sum(
+                log.get("image_token_count", 0) for log in logs_response.data
+            )
+            total_cost = sum(
+                log.get("estimated_cost", 0.0) for log in logs_response.data
+            )
+            total_menu_images = sum(
+                1 for log in logs_response.data if log.get("is_menu_image")
+            )
+            total_items_extracted = sum(
+                log.get("extracted_items_count", 0) for log in logs_response.data
+            )
+
+            summary = {
+                "total_tokens": total_tokens,
+                "total_cost": round(total_cost, 4),
+                "total_images_processed": len(logs_response.data),
+                "menu_images_found": total_menu_images,
+                "total_items_extracted": total_items_extracted,
+                "avg_cost_per_image": (
+                    round(total_cost / len(logs_response.data), 4)
+                    if logs_response.data
+                    else 0
+                ),
+                "avg_tokens_per_image": (
+                    round(total_tokens / len(logs_response.data), 2)
+                    if logs_response.data
+                    else 0
+                ),
+            }
+
+            logger.info(
+                f"Processing summary for restaurant {place_id}: "
+                f"{summary['total_tokens']} tokens, ${summary['total_cost']}, "
+                f"{summary['menu_images_found']} menu images, "
+                f"{summary['total_items_extracted']} items extracted "
+                f"(Classification: gpt-4.1-nano, Analysis: gpt-4.1)"
+            )
+
+            return summary
+
+        except Exception as e:
+            logger.error(
+                f"Error calculating processing summary for restaurant {restaurant_id}: {str(e)}"
+            )
+            return {}
 
 
 def run_menu_processing_pipeline(

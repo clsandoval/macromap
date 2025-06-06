@@ -93,7 +93,10 @@ def classify_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any
                             "type": "text",
                             "text": "Please analyze this image and classify whether it shows a restaurant menu.",
                         },
-                        {"type": "image_url", "image_url": {"url": image_url}},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_url, "detail": "high"},
+                        },
                     ],
                 },
             ],
