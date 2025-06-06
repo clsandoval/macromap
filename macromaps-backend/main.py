@@ -11,8 +11,8 @@ from utils.apify_utils import (
     APIFY_API_TOKEN,
 )
 
-# Import the menu processing pipeline
-from tasks.menu_processing import run_menu_processing_pipeline
+# Import the restaurant processing task
+from tasks.restaurant_processing import trigger_restaurant_processing
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
@@ -62,6 +62,9 @@ def scan_nearby():
         if error:
             return jsonify({"error": error}), 500
 
+        # Trigger background menu processing for extracted restaurants
+        processing_result = trigger_restaurant_processing(restaurants)
+
         return jsonify(
             {
                 "success": True,
@@ -71,95 +74,12 @@ def scan_nearby():
                     "latitude": latitude,
                     "longitude": longitude,
                 },
+                "menu_processing": processing_result,
             }
         )
 
     except Exception as e:
         print(f"Error in scan_nearby: {str(e)}")
-        return jsonify({"error": "Internal server error", "details": str(e)}), 500
-
-
-@app.route("/process-menus", methods=["POST"])
-def process_menus():
-    """
-    Endpoint to trigger the menu processing pipeline
-    """
-    try:
-        data = request.get_json() or {}
-
-        # Optional parameters
-        restaurant_ids = data.get(
-            "restaurant_ids"
-        )  # List of specific restaurant IDs to process
-        max_workers = data.get("max_workers", 10)  # Number of worker threads
-        background = data.get("background", True)  # Whether to run in background
-
-        print(f"Starting menu processing pipeline with {max_workers} workers")
-        if restaurant_ids:
-            print(f"Processing specific restaurants: {restaurant_ids}")
-        else:
-            print("Processing all pending restaurants")
-
-        if background:
-            # Run in background thread
-            def run_processing():
-                try:
-                    results = run_menu_processing_pipeline(
-                        restaurant_ids=restaurant_ids, max_workers=max_workers
-                    )
-                    print(
-                        f"Menu processing completed. Processed {len(results)} restaurants."
-                    )
-                except Exception as e:
-                    print(f"Error in background menu processing: {str(e)}")
-
-            processing_thread = threading.Thread(target=run_processing)
-            processing_thread.daemon = True
-            processing_thread.start()
-
-            return jsonify(
-                {
-                    "success": True,
-                    "message": "Menu processing started in background",
-                    "background": True,
-                }
-            )
-        else:
-            # Run synchronously (for testing or small batches)
-            results = run_menu_processing_pipeline(
-                restaurant_ids=restaurant_ids, max_workers=max_workers
-            )
-
-            # Prepare response with summary
-            successful_count = sum(1 for r in results.values() if not r.error)
-            total_menu_items = sum(
-                r.total_menu_items for r in results.values() if not r.error
-            )
-
-            return jsonify(
-                {
-                    "success": True,
-                    "message": f"Menu processing completed",
-                    "results": {
-                        "total_restaurants": len(results),
-                        "successful_restaurants": successful_count,
-                        "total_menu_items_extracted": total_menu_items,
-                        "details": {
-                            place_id: {
-                                "total_images": result.total_images,
-                                "menu_images_found": result.menu_images_found,
-                                "total_menu_items": result.total_menu_items,
-                                "processing_time": result.processing_time,
-                                "error": result.error,
-                            }
-                            for place_id, result in results.items()
-                        },
-                    },
-                }
-            )
-
-    except Exception as e:
-        print(f"Error in process_menus: {str(e)}")
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
 

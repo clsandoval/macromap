@@ -99,6 +99,29 @@ class MenuProcessor:
             logger.error(f"Error retrieving images for restaurant {place_id}: {str(e)}")
             return [], f"Database error: {str(e)}"
 
+    def sort_images_by_menu_likelihood(self, image_urls: List[str]) -> List[str]:
+        """
+        Sort image URLs by likelihood of containing a menu.
+        URLs with /p/ are prioritized as they're more likely to have menus.
+
+        Args:
+            image_urls: List of image URLs to sort
+
+        Returns:
+            Sorted list of image URLs
+        """
+
+        def get_priority(url: str) -> int:
+            """Return priority score (lower = higher priority)"""
+            if "/p/" in url:
+                return 0  # Highest priority - most likely to have menus
+            elif "/gps-cs-s/" in url:
+                return 1  # Lower priority
+            else:
+                return 2  # Lowest priority - other URL types
+
+        return sorted(image_urls, key=get_priority)
+
     def classify_single_image(self, image_url: str) -> ImageClassificationResult:
         """
         Classify a single image to determine if it's a menu
@@ -113,7 +136,7 @@ class MenuProcessor:
             logger.info(f"Classifying image: {image_url}")
 
             # Call LLM classification function
-            classification = classify_menu_image(image_url)
+            classification = classify_menu_image(image_url, model="gpt-4.1-nano")
 
             return ImageClassificationResult(
                 image_url=image_url,
@@ -195,6 +218,9 @@ class MenuProcessor:
                     error="No images to process",
                 )
 
+            # Sort images by menu likelihood
+            sorted_image_urls = self.sort_images_by_menu_likelihood(image_urls)
+
             # Step 1: Classify all images in parallel
             classification_results = []
             with ThreadPoolExecutor(
@@ -202,7 +228,7 @@ class MenuProcessor:
             ) as executor:
                 classification_futures = {
                     executor.submit(self.classify_single_image, url): url
-                    for url in image_urls
+                    for url in sorted_image_urls
                 }
 
                 for future in as_completed(classification_futures):

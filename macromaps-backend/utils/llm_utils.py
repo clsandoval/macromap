@@ -175,7 +175,7 @@ def analyze_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any]
                 },
             ],
             response_format=MenuAnalysis,
-            max_tokens=2000,
+            max_tokens=5000,
         )
 
         parsed_result = response.choices[0].message.parsed

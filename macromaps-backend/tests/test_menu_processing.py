@@ -73,12 +73,79 @@ def load_example_data():
 
 
 def select_random_images(all_images, count=10):
-    """Select random images for testing"""
+    """Select random images for testing, prioritizing URLs likely to contain menus"""
     if len(all_images) < count:
         print(f"Warning: Only {len(all_images)} images available, using all of them")
         return all_images
 
-    return random.sample(all_images, count)
+    # Sort images by menu likelihood first (prioritize /p/ URLs)
+    sorted_images = sort_images_by_menu_likelihood(all_images)
+
+    # Count how many of each type we have
+    p_images = [img for img in sorted_images if "/p/" in img.get("url", "")]
+    gps_images = [img for img in sorted_images if "/gps-cs-s/" in img.get("url", "")]
+    other_images = [
+        img
+        for img in sorted_images
+        if "/p/" not in img.get("url", "") and "/gps-cs-s/" not in img.get("url", "")
+    ]
+
+    print(
+        f"📊 Image distribution: {len(p_images)} /p/ URLs, {len(gps_images)} /gps-cs-s/ URLs, {len(other_images)} other URLs"
+    )
+
+    # Select from the sorted list to bias towards menu-likely images
+    # Take more from high-priority groups
+    selected_images = []
+
+    # First, try to get images from /p/ URLs (most likely to have menus)
+    p_count = min(count // 2, len(p_images))  # Up to half from /p/ URLs
+    if p_count > 0:
+        selected_images.extend(random.sample(p_images, p_count))
+        print(f"   Selected {p_count} /p/ URLs (high menu probability)")
+
+    # Then get some from /gps-cs-s/ URLs
+    remaining_count = count - len(selected_images)
+    gps_count = min(remaining_count // 2, len(gps_images))
+    if gps_count > 0:
+        selected_images.extend(random.sample(gps_images, gps_count))
+        print(f"   Selected {gps_count} /gps-cs-s/ URLs (medium menu probability)")
+
+    # Fill the rest with any remaining images
+    remaining_count = count - len(selected_images)
+    if remaining_count > 0:
+        remaining_images = [img for img in sorted_images if img not in selected_images]
+        if remaining_images:
+            final_count = min(remaining_count, len(remaining_images))
+            selected_images.extend(random.sample(remaining_images, final_count))
+            print(f"   Selected {final_count} additional URLs")
+
+    return selected_images
+
+
+def sort_images_by_menu_likelihood(image_data_list):
+    """
+    Sort image data by likelihood of containing a menu.
+    URLs with /p/ are prioritized as they're more likely to have menus.
+
+    Args:
+        image_data_list: List of image data dictionaries with 'url' key
+
+    Returns:
+        Sorted list of image data
+    """
+
+    def get_priority(image_data):
+        """Return priority score (lower = higher priority)"""
+        url = image_data.get("url", "")
+        if "/p/" in url:
+            return 0  # Highest priority - most likely to have menus
+        elif "/gps-cs-s/" in url:
+            return 1  # Lower priority
+        else:
+            return 2  # Lowest priority - other URL types
+
+    return sorted(image_data_list, key=get_priority)
 
 
 def test_image_classification(image_urls):
