@@ -195,7 +195,7 @@ class MenuProcessor:
             logger.info(f"Classifying image: {image_url}")
 
             # Specify the model to use
-            model = "gpt-4.1-nano"
+            model = "gpt-4.1-mini"
 
             # Call LLM classification function
             classification = classify_menu_image(image_url, model=model)

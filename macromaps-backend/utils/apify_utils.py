@@ -50,7 +50,7 @@ def extract_restaurants_via_apify(latitude, longitude):
             "reviewsTranslation": "originalAndTranslated",
             "personalDataOptions": "personal-data-to-be-excluded",
             "cacheBusting": False,
-            "maxImages": 500,  # Limit images to avoid too much data
+            "maxImages": 100,  # Limit images to avoid too much data
         }
 
         # Run the Actor and wait for it to finish

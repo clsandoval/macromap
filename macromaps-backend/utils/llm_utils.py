@@ -70,7 +70,7 @@ def classify_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any
                 {
                     "role": "system",
                     "content": """You are an expert at classifying restaurant images. 
-                    Analyze the provided image and determine if it shows a menu (a list of food/drink items with or without prices).
+                    Analyze the provided image and determine if it shows a clear, complete menu (a list of food/drink items with or without prices).
                     
                     Consider these criteria:
                     - Must show text listing food or drink items
@@ -78,12 +78,16 @@ def classify_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any
                     - Prices are helpful but not required
                     - Can be physical menu, digital display, or chalk board
                     - Must be readable (not blurry or too small)
+                    - Menu must be the main focus and fill most of the image
+                    - Must show the complete menu, not just a portion or corner
                     
                     NOT a menu:
                     - Just photos of food dishes
-                    - Restaurant interior/exterior photos
+                    - Restaurant interior/exterior photos where menu is in background
                     - Staff photos
                     - Logos or promotional materials only
+                    - Partial or obscured menus
+                    - Menus photographed from far away
                     """,
                 },
                 {
