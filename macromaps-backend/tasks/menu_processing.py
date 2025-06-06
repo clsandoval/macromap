@@ -79,7 +79,7 @@ class MenuProcessor:
         try:
             response = (
                 supabase.table("restaurants")
-                .select("images")
+                .select("id, image_urls, images")
                 .eq("place_id", place_id)
                 .execute()
             )
@@ -88,12 +88,34 @@ class MenuProcessor:
                 return [], f"No restaurant found with place_id: {place_id}"
 
             restaurant = response.data[0]
-            images = restaurant.get("images", [])
 
-            if not images:
+            # Get image URLs from both possible sources
+            image_urls = []
+
+            # From image_urls array field
+            if restaurant.get("image_urls"):
+                image_urls.extend(restaurant["image_urls"])
+
+            # From images JSONB field (if it contains URLs)
+            images_json = restaurant.get("images")
+            if images_json:
+                if isinstance(images_json, dict):
+                    # If images is a dict with an items array
+                    if "items" in images_json and isinstance(
+                        images_json["items"], list
+                    ):
+                        image_urls.extend(images_json["items"])
+                elif isinstance(images_json, list):
+                    # If images is directly a list
+                    image_urls.extend(images_json)
+
+            if not image_urls:
                 return [], f"No images found for restaurant: {place_id}"
 
-            return images, None
+            # Remove duplicates while preserving order
+            unique_urls = list(dict.fromkeys(image_urls))
+
+            return unique_urls, None
 
         except Exception as e:
             logger.error(f"Error retrieving images for restaurant {place_id}: {str(e)}")
@@ -195,27 +217,45 @@ class MenuProcessor:
         logger.info(f"Processing restaurant: {place_id}")
 
         try:
+            # Get restaurant ID and images
+            restaurant_response = (
+                supabase.table("restaurants")
+                .select("id, image_urls, images")
+                .eq("place_id", place_id)
+                .execute()
+            )
+
+            if not restaurant_response.data:
+                return RestaurantProcessingResult(
+                    place_id=place_id,
+                    total_images=0,
+                    menu_images_found=0,
+                    total_menu_items=0,
+                    processing_time=time.time() - start_time,
+                    error=f"No restaurant found with place_id: {place_id}",
+                )
+
+            restaurant = restaurant_response.data[0]
+            restaurant_id = restaurant["id"]
+
+            # Add to processing queue
+            self.add_to_processing_queue(restaurant_id)
+            self.update_processing_queue_status(restaurant_id, "processing")
+
             # Get all images for the restaurant
             image_urls, error = self.get_restaurant_images(place_id)
 
-            if error:
-                return RestaurantProcessingResult(
-                    place_id=place_id,
-                    total_images=0,
-                    menu_images_found=0,
-                    total_menu_items=0,
-                    processing_time=time.time() - start_time,
-                    error=error,
+            if error or not image_urls:
+                self.update_processing_queue_status(
+                    restaurant_id, "failed", error or "No images to process"
                 )
-
-            if not image_urls:
                 return RestaurantProcessingResult(
                     place_id=place_id,
                     total_images=0,
                     menu_images_found=0,
                     total_menu_items=0,
                     processing_time=time.time() - start_time,
-                    error="No images to process",
+                    error=error or "No images to process",
                 )
 
             # Sort images by menu likelihood
@@ -235,6 +275,23 @@ class MenuProcessor:
                     result = future.result()
                     classification_results.append(result)
 
+                    # Log each image classification
+                    confidence = 0.5  # Default confidence
+                    if result.confidence_level == "high":
+                        confidence = 0.8
+                    elif result.confidence_level == "medium":
+                        confidence = 0.6
+                    elif result.confidence_level == "low":
+                        confidence = 0.3
+
+                    self.log_image_processing(
+                        restaurant_id=restaurant_id,
+                        image_url=result.image_url,
+                        is_menu=result.is_menu,
+                        confidence=confidence,
+                        status="completed" if not result.error else "failed",
+                    )
+
             # Step 2: Filter menu images and analyze them in parallel
             menu_image_urls = [
                 result.image_url
@@ -247,6 +304,7 @@ class MenuProcessor:
             )
 
             if not menu_image_urls:
+                self.update_processing_queue_status(restaurant_id, "completed")
                 return RestaurantProcessingResult(
                     place_id=place_id,
                     total_images=len(image_urls),
@@ -268,9 +326,19 @@ class MenuProcessor:
                     if not result.error:
                         analysis_results.append(result)
 
+                        # Update log with extracted items count
+                        supabase.table("image_processing_log").update(
+                            {"extracted_items_count": len(result.menu_items)}
+                        ).eq("restaurant_id", restaurant_id).eq(
+                            "image_url", result.image_url
+                        ).execute()
+
             # Step 4: Aggregate all menu items
             all_menu_items = []
             for analysis in analysis_results:
+                # Add source image URL to each menu item
+                for item in analysis.menu_items:
+                    item["extracted_from_image_url"] = analysis.image_url
                 all_menu_items.extend(analysis.menu_items)
 
             if all_menu_items:
@@ -278,31 +346,56 @@ class MenuProcessor:
                 final_menu_items = aggregate_menu_items(all_menu_items, place_id)
 
                 # Step 5: Save to Supabase
-                self.save_menu_items_to_supabase(place_id, final_menu_items)
+                success = self.save_menu_items_to_supabase(place_id, final_menu_items)
 
-                logger.info(
-                    f"Successfully processed restaurant {place_id}: {len(final_menu_items)} menu items saved"
-                )
+                if success:
+                    self.update_processing_queue_status(restaurant_id, "completed")
+                    logger.info(
+                        f"Successfully processed restaurant {place_id}: {len(final_menu_items)} menu items saved"
+                    )
 
-                return RestaurantProcessingResult(
-                    place_id=place_id,
-                    total_images=len(image_urls),
-                    menu_images_found=len(menu_image_urls),
-                    total_menu_items=len(final_menu_items),
-                    processing_time=time.time() - start_time,
-                )
+                    return RestaurantProcessingResult(
+                        place_id=place_id,
+                        total_images=len(image_urls),
+                        menu_images_found=len(menu_image_urls),
+                        total_menu_items=len(final_menu_items),
+                        processing_time=time.time() - start_time,
+                    )
+                else:
+                    error_msg = "Failed to save menu items to database"
+                    self.update_processing_queue_status(
+                        restaurant_id, "failed", error_msg
+                    )
+                    return RestaurantProcessingResult(
+                        place_id=place_id,
+                        total_images=len(image_urls),
+                        menu_images_found=len(menu_image_urls),
+                        total_menu_items=0,
+                        processing_time=time.time() - start_time,
+                        error=error_msg,
+                    )
             else:
+                error_msg = "No menu items could be extracted"
+                self.update_processing_queue_status(restaurant_id, "completed")
                 return RestaurantProcessingResult(
                     place_id=place_id,
                     total_images=len(image_urls),
                     menu_images_found=len(menu_image_urls),
                     total_menu_items=0,
                     processing_time=time.time() - start_time,
-                    error="No menu items could be extracted",
+                    error=error_msg,
                 )
 
         except Exception as e:
             logger.error(f"Error processing restaurant {place_id}: {str(e)}")
+
+            # Try to update processing queue status if we have restaurant_id
+            try:
+                if "restaurant_id" in locals():
+                    self.update_processing_queue_status(restaurant_id, "failed", str(e))
+            except:
+                pass  # Ignore if we can't update the queue
+
             return RestaurantProcessingResult(
                 place_id=place_id,
                 total_images=0,
@@ -326,22 +419,69 @@ class MenuProcessor:
             Success boolean
         """
         try:
+            # First, get the restaurant UUID from place_id
+            restaurant_response = (
+                supabase.table("restaurants")
+                .select("id")
+                .eq("place_id", place_id)
+                .execute()
+            )
+
+            if not restaurant_response.data:
+                logger.error(f"Restaurant not found with place_id: {place_id}")
+                return False
+
+            restaurant_id = restaurant_response.data[0]["id"]
+
             # Prepare data for insertion
             items_to_insert = []
             for item in menu_items:
-                items_to_insert.append(
-                    {
-                        "place_id": place_id,
-                        "name": item.get("name", ""),
-                        "description": item.get("description", ""),
-                        "price": item.get("price"),
-                        "calories": item.get("calories"),
-                        "protein": item.get("protein"),
-                        "carbs": item.get("carbs"),
-                        "fat": item.get("fat"),
-                        "category": item.get("category", ""),
-                    }
-                )
+                menu_item = {
+                    "restaurant_id": restaurant_id,  # Use restaurant UUID
+                    "name": item.get("name", ""),
+                    "description": item.get("description", ""),
+                    "price": float(item.get("price")) if item.get("price") else None,
+                    "currency": item.get("currency", "USD"),
+                    # Nutritional Information
+                    "calories": (
+                        int(item.get("calories")) if item.get("calories") else None
+                    ),
+                    "protein": (
+                        float(item.get("protein")) if item.get("protein") else None
+                    ),
+                    "carbs": float(item.get("carbs")) if item.get("carbs") else None,
+                    "fat": float(item.get("fat")) if item.get("fat") else None,
+                    "fiber": float(item.get("fiber")) if item.get("fiber") else None,
+                    "sugar": float(item.get("sugar")) if item.get("sugar") else None,
+                    "sodium": float(item.get("sodium")) if item.get("sodium") else None,
+                    # Dietary Classifications
+                    "dietary_tags": item.get("dietary_tags", []),
+                    "allergens": item.get("allergens", []),
+                    "spice_level": item.get("spice_level", ""),
+                    # Menu Organization
+                    "category": item.get("category", ""),
+                    "subcategory": item.get("subcategory", ""),
+                    "menu_section": item.get("menu_section", ""),
+                    # Processing Metadata
+                    "extracted_from_image_url": item.get(
+                        "extracted_from_image_url", ""
+                    ),
+                    "confidence_score": (
+                        float(item.get("confidence_score"))
+                        if item.get("confidence_score")
+                        else None
+                    ),
+                    "llm_processed": True,  # Since we're using LLM to process
+                    # Availability
+                    "is_available": item.get("is_available", True),
+                    "seasonal": item.get("seasonal", False),
+                }
+
+                # Only add non-None values to avoid database errors
+                clean_item = {
+                    k: v for k, v in menu_item.items() if v is not None and v != ""
+                }
+                items_to_insert.append(clean_item)
 
             # Insert into menu_items table
             if items_to_insert:
@@ -468,6 +608,123 @@ class MenuProcessor:
         logger.info(f"Total processing time: {total_time:.2f} seconds")
 
         return results
+
+    def log_image_processing(
+        self,
+        restaurant_id: str,
+        image_url: str,
+        is_menu: bool,
+        confidence: float,
+        status: str,
+        extracted_items_count: int = 0,
+    ) -> bool:
+        """
+        Log image processing results to the image_processing_log table
+
+        Args:
+            restaurant_id: Restaurant UUID
+            image_url: URL of the processed image
+            is_menu: Whether the image was classified as a menu
+            confidence: Classification confidence (0.00-1.00)
+            status: Processing status (pending, processing, completed, failed)
+            extracted_items_count: Number of items extracted from this image
+
+        Returns:
+            Success boolean
+        """
+        try:
+            log_entry = {
+                "restaurant_id": restaurant_id,
+                "image_url": image_url,
+                "is_menu_image": is_menu,
+                "classification_confidence": min(
+                    max(confidence, 0.00), 1.00
+                ),  # Ensure 0-1 range
+                "processing_status": status,
+                "extracted_items_count": extracted_items_count,
+            }
+
+            response = (
+                supabase.table("image_processing_log").insert(log_entry).execute()
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Error logging image processing for {image_url}: {str(e)}")
+            return False
+
+    def add_to_processing_queue(
+        self, restaurant_id: str, task_type: str = "menu_extraction", priority: int = 5
+    ) -> bool:
+        """
+        Add a restaurant to the processing queue
+
+        Args:
+            restaurant_id: Restaurant UUID
+            task_type: Type of task (menu_extraction, nutrition_analysis)
+            priority: Task priority (1-10, lower is higher priority)
+
+        Returns:
+            Success boolean
+        """
+        try:
+            queue_entry = {
+                "restaurant_id": restaurant_id,
+                "task_type": task_type,
+                "priority": priority,
+                "status": "pending",
+                "attempts": 0,
+                "max_attempts": 3,
+            }
+
+            response = supabase.table("processing_queue").insert(queue_entry).execute()
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"Error adding restaurant {restaurant_id} to processing queue: {str(e)}"
+            )
+            return False
+
+    def update_processing_queue_status(
+        self, restaurant_id: str, status: str, error_message: str = None
+    ) -> bool:
+        """
+        Update processing queue status for a restaurant
+
+        Args:
+            restaurant_id: Restaurant UUID
+            status: New status (processing, completed, failed)
+            error_message: Optional error message if failed
+
+        Returns:
+            Success boolean
+        """
+        try:
+            update_data = {"status": status}
+
+            if status == "processing":
+                update_data["started_at"] = "NOW()"
+            elif status in ["completed", "failed"]:
+                update_data["completed_at"] = "NOW()"
+
+            if error_message:
+                update_data["error_message"] = error_message
+
+            response = (
+                supabase.table("processing_queue")
+                .update(update_data)
+                .eq("restaurant_id", restaurant_id)
+                .eq("task_type", "menu_extraction")
+                .execute()
+            )
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"Error updating processing queue for restaurant {restaurant_id}: {str(e)}"
+            )
+            return False
 
 
 def run_menu_processing_pipeline(

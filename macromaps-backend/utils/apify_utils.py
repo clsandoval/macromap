@@ -85,28 +85,83 @@ def format_restaurant_data(restaurants):
     """Format restaurant data from Apify response to standard format"""
     formatted_restaurants = []
     for restaurant in restaurants:
+        # Handle location data with proper null checks
+        location = restaurant.get("location", {})
+        latitude = location.get("lat") if location else None
+        longitude = location.get("lng") if location else None
+
+        # Handle image URLs - ensure they're properly formatted as array
+        image_urls = restaurant.get("imageUrls", [])
+        if not isinstance(image_urls, list):
+            image_urls = []
+
+        # Handle images JSONB field - structure the data properly for database
+        images_data = restaurant.get("images", [])
+        images_json = None
+
+        if images_data:
+            if isinstance(images_data, list):
+                # If images is an array of image objects, structure it properly for JSONB
+                images_json = {
+                    "items": images_data,
+                    "count": len(images_data),
+                    "source": "apify",
+                }
+            elif isinstance(images_data, dict):
+                # If it's already a structured object, use it as is
+                images_json = images_data
+            else:
+                # Invalid format, create empty structure
+                images_json = None
+
+        # Handle opening hours - ensure it's properly structured as array
+        opening_hours = restaurant.get("openingHours", [])
+        if not isinstance(opening_hours, list):
+            opening_hours = []
+
+        # Handle ratings and counts with proper type conversion
+        rating = restaurant.get("totalScore")
+        if rating is not None:
+            try:
+                rating = float(rating)
+                # Ensure rating is within valid range (0-5)
+                if rating < 0 or rating > 5:
+                    rating = None
+            except (ValueError, TypeError):
+                rating = None
+
+        reviews_count = restaurant.get("reviewsCount", 0)
+        try:
+            reviews_count = int(reviews_count) if reviews_count is not None else 0
+            # Ensure reviews count is non-negative
+            if reviews_count < 0:
+                reviews_count = 0
+        except (ValueError, TypeError):
+            reviews_count = 0
+
         formatted_restaurant = {
             "name": restaurant.get("title", "Unknown"),
             "address": restaurant.get("address", "Address not available"),
-            "rating": restaurant.get("totalScore", 0),
-            "reviewsCount": restaurant.get("reviewsCount", 0),
+            "rating": rating,
+            "reviewsCount": reviews_count,
             "category": restaurant.get("categoryName", "Restaurant"),
             "phone": restaurant.get("phone", ""),
             "website": restaurant.get("website", ""),
             "priceLevel": restaurant.get("priceLevel", ""),
-            "openingHours": restaurant.get("openingHours", []),
+            "openingHours": opening_hours,
             "location": {
-                "lat": restaurant.get("location", {}).get("lat", 0),
-                "lng": restaurant.get("location", {}).get("lng", 0),
+                "lat": latitude,
+                "lng": longitude,
             },
             "placeId": restaurant.get("placeId", ""),
             "url": restaurant.get("url", ""),
             "menuItems": restaurant.get("menuItems", []),
-            # Photo data from Apify
-            "images": restaurant.get(
-                "images", []
-            ),  # Array of image objects with photographer info
-            "imageUrls": restaurant.get("imageUrls", []),  # Array of direct image URLs
+            # Properly structured image data for database schema
+            "images": images_json,  # JSONB field - structured object or null
+            "imageUrls": image_urls,  # TEXT[] field - array of direct URLs
+            # Additional metadata for tracking
+            "source": "apify",
+            "extracted_at": restaurant.get("scrapedAt", ""),
         }
         formatted_restaurants.append(formatted_restaurant)
     return formatted_restaurants

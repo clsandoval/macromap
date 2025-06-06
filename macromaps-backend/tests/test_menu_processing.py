@@ -9,6 +9,8 @@ import random
 import time
 import sys
 import os
+import uuid
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +18,7 @@ from pathlib import Path
 
 from tasks import MenuProcessor, run_menu_processing_pipeline
 from utils import classify_menu_image, analyze_menu_image
+from utils.supabase_utils import supabase
 
 # Model pricing per 1K tokens (approximate costs)
 MODEL_PRICING = {
