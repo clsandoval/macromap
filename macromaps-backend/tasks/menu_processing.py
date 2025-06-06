@@ -229,12 +229,15 @@ class MenuProcessor:
                 error=str(e),
             )
 
-    def analyze_menu_image(self, image_url: str) -> MenuAnalysisResult:
+    def analyze_menu_image(
+        self, image_url: str, restaurant_data: Dict = None
+    ) -> MenuAnalysisResult:
         """
         Analyze a menu image to extract menu items
 
         Args:
             image_url: URL of the menu image to analyze
+            restaurant_data: Restaurant data including location and name
 
         Returns:
             MenuAnalysisResult object
@@ -245,8 +248,19 @@ class MenuProcessor:
             # Specify the model to use for analysis (can be different from classification)
             model = "gpt-4.1"  # Use higher quality model for menu analysis
 
-            # Call LLM analysis function
-            analysis = analyze_menu_image(image_url, model=model)
+            # Extract location data if available
+            latitude = restaurant_data.get("latitude") if restaurant_data else None
+            longitude = restaurant_data.get("longitude") if restaurant_data else None
+            restaurant_name = restaurant_data.get("name") if restaurant_data else None
+
+            # Call LLM analysis function with location context
+            analysis = analyze_menu_image(
+                image_url,
+                model=model,
+                latitude=latitude,
+                longitude=longitude,
+                restaurant_name=restaurant_name,
+            )
 
             # Get tokens used and calculate cost
             tokens_used = analysis.get("tokens_used", 0)
@@ -285,10 +299,10 @@ class MenuProcessor:
         logger.info(f"Processing restaurant: {place_id}")
 
         try:
-            # Get restaurant ID and images
+            # Get restaurant ID, location, and images
             restaurant_response = (
                 supabase.table("restaurants")
-                .select("id, image_urls, images")
+                .select("id, name, latitude, longitude, image_urls, images")
                 .eq("place_id", place_id)
                 .execute()
             )
@@ -388,7 +402,7 @@ class MenuProcessor:
             analysis_results = []
             with ThreadPoolExecutor(max_workers=self.analysis_workers) as executor:
                 analysis_futures = {
-                    executor.submit(self.analyze_menu_image, url): url
+                    executor.submit(self.analyze_menu_image, url, restaurant): url
                     for url in menu_image_urls
                 }
 
@@ -439,8 +453,14 @@ class MenuProcessor:
                 all_menu_items.extend(analysis.menu_items)
 
             if all_menu_items:
-                # Use LLM to consolidate and clean up the menu items
-                final_menu_items = aggregate_menu_items(all_menu_items, place_id)
+                # Use LLM to consolidate and clean up the menu items with location context
+                final_menu_items = aggregate_menu_items(
+                    all_menu_items,
+                    place_id,
+                    latitude=restaurant.get("latitude"),
+                    longitude=restaurant.get("longitude"),
+                    restaurant_name=restaurant.get("name"),
+                )
 
                 # Step 5: Save to Supabase
                 success = self.save_menu_items_to_supabase(place_id, final_menu_items)

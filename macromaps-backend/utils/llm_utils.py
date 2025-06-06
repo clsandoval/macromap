@@ -129,13 +129,22 @@ def classify_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any
         }
 
 
-def analyze_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any]:
+def analyze_menu_image(
+    image_url: str,
+    model: str = "gpt-4.1",
+    latitude: float = None,
+    longitude: float = None,
+    restaurant_name: str = None,
+) -> Dict[str, Any]:
     """
     Analyze a menu image to extract menu items and nutritional information
 
     Args:
         image_url: URL of the menu image to analyze
         model: OpenAI model to use
+        latitude: Restaurant latitude for location context
+        longitude: Restaurant longitude for location context
+        restaurant_name: Restaurant name for additional context
 
     Returns:
         Dictionary with menu analysis results
@@ -143,12 +152,34 @@ def analyze_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any]
     try:
         logger.info(f"Analyzing menu image with model {model}: {image_url}")
 
+        # Build location context for the prompt
+        location_context = ""
+        if latitude is not None and longitude is not None:
+            # Determine approximate location/country from coordinates for currency context
+            location_hints = _get_location_context(latitude, longitude)
+            location_context = f"""
+            
+LOCATION CONTEXT:
+This menu is from a restaurant located at coordinates {latitude:.4f}, {longitude:.4f}.
+{location_hints}
+Please use this location information to:
+1. Determine the appropriate LOCAL CURRENCY for prices (USD, EUR, PHP, SGD, etc.)
+2. Consider local food culture and typical portion sizes
+3. Adjust nutritional estimates based on regional cooking styles
+4. Use location-appropriate price formatting (e.g., PHP 250.00 for Philippines, $15.99 for USA)
+
+IMPORTANT: Always extract prices as numbers only (no currency symbols), but consider the local currency when evaluating if prices seem reasonable."""
+
+        restaurant_context = ""
+        if restaurant_name:
+            restaurant_context = f"\nThis menu is from: {restaurant_name}"
+
         response = client.beta.chat.completions.parse(
             model=model,
             messages=[
                 {
                     "role": "system",
-                    "content": """You are an expert at extracting menu information from restaurant menu images.
+                    "content": f"""You are an expert at extracting menu information from restaurant menu images.
                     Extract all visible menu items with the following information:
                     
                     For each item, provide:
@@ -165,9 +196,10 @@ def analyze_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any]
                     - Only provide estimates if you're reasonably confident
                     - Base estimates on typical portions for that type of food
                     - Consider cooking methods (fried vs grilled, etc.)
+                    - Consider local/regional food preparation styles based on location
                     - Don't guess wildly - it's better to leave null than to be very wrong
                     
-                    Extract all visible items even if information is incomplete.
+                    Extract all visible items even if information is incomplete.{location_context}{restaurant_context}
                     """,
                 },
                 {
@@ -175,7 +207,7 @@ def analyze_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any]
                     "content": [
                         {
                             "type": "text",
-                            "text": "Please analyze this menu image and extract all visible menu items with their details.",
+                            "text": "Please analyze this menu image and extract all visible menu items with their details. Pay special attention to the location context for appropriate currency and cultural considerations.",
                         },
                         {"type": "image_url", "image_url": {"url": image_url}},
                     ],
@@ -222,8 +254,114 @@ def analyze_menu_image(image_url: str, model: str = "gpt-4.1") -> Dict[str, Any]
         }
 
 
+def _get_location_context(latitude: float, longitude: float) -> str:
+    """
+    Generate location context hints based on coordinates
+
+    Args:
+        latitude: Latitude coordinate
+        longitude: Longitude coordinate
+
+    Returns:
+        String with location context and currency hints
+    """
+    try:
+        # Basic geographic regions and their typical currencies
+        location_hints = []
+
+        # Southeast Asia
+        if 1.0 <= latitude <= 25.0 and 95.0 <= longitude <= 141.0:
+            if 14.0 <= latitude <= 19.0 and 120.0 <= longitude <= 127.0:
+                location_hints.append(
+                    "This appears to be in the Philippines. Expected currency: Philippine Peso (PHP)."
+                )
+                location_hints.append(
+                    "Typical price range: PHP 150-500 for main dishes, PHP 50-150 for appetizers."
+                )
+            elif 1.2 <= latitude <= 1.5 and 103.6 <= longitude <= 104.0:
+                location_hints.append(
+                    "This appears to be in Singapore. Expected currency: Singapore Dollar (SGD)."
+                )
+                location_hints.append(
+                    "Typical price range: SGD 15-35 for main dishes, SGD 8-18 for appetizers."
+                )
+            elif 13.7 <= latitude <= 13.8 and 100.4 <= longitude <= 100.6:
+                location_hints.append(
+                    "This appears to be in Bangkok, Thailand. Expected currency: Thai Baht (THB)."
+                )
+                location_hints.append(
+                    "Typical price range: THB 200-600 for main dishes, THB 100-300 for appetizers."
+                )
+            else:
+                location_hints.append(
+                    "This appears to be in Southeast Asia. Common currencies: PHP, SGD, THB, MYR, IDR."
+                )
+
+        # United States
+        elif 25.0 <= latitude <= 49.0 and -125.0 <= longitude <= -66.0:
+            location_hints.append(
+                "This appears to be in the United States. Expected currency: US Dollar (USD)."
+            )
+            location_hints.append(
+                "Typical price range: $12-35 for main dishes, $6-18 for appetizers."
+            )
+
+        # Europe
+        elif 35.0 <= latitude <= 71.0 and -10.0 <= longitude <= 40.0:
+            location_hints.append(
+                "This appears to be in Europe. Expected currency: Euro (EUR) or local currency."
+            )
+            location_hints.append(
+                "Typical price range: €10-30 for main dishes, €5-15 for appetizers."
+            )
+
+        # East Asia
+        elif 20.0 <= latitude <= 50.0 and 100.0 <= longitude <= 145.0:
+            if 35.0 <= latitude <= 36.0 and 139.0 <= longitude <= 140.0:
+                location_hints.append(
+                    "This appears to be in Tokyo, Japan. Expected currency: Japanese Yen (JPY)."
+                )
+                location_hints.append(
+                    "Typical price range: ¥1000-3000 for main dishes, ¥500-1500 for appetizers."
+                )
+            else:
+                location_hints.append(
+                    "This appears to be in East Asia. Common currencies: JPY, KRW, CNY."
+                )
+
+        # Australia/Oceania
+        elif -45.0 <= latitude <= -10.0 and 110.0 <= longitude <= 180.0:
+            location_hints.append(
+                "This appears to be in Australia/Oceania. Expected currency: Australian Dollar (AUD)."
+            )
+            location_hints.append(
+                "Typical price range: AUD 18-40 for main dishes, AUD 10-20 for appetizers."
+            )
+
+        # Default fallback
+        else:
+            location_hints.append(
+                "Geographic location detected. Please determine appropriate local currency from the menu context."
+            )
+
+        location_hints.append(
+            "Consider local cuisine styles, portion sizes, and economic factors when estimating nutritional values."
+        )
+
+        return " ".join(location_hints)
+
+    except Exception as e:
+        logger.warning(f"Error generating location context: {str(e)}")
+        return "Please determine appropriate currency and local context from the menu image."
+
+
 def aggregate_menu_items(
-    menu_items_list: List[Dict], place_id: str, model: str = "gpt-4.1"
+    menu_items_list: List[Dict],
+    place_id: str,
+    model: str = "gpt-4.1",
+    latitude: float = None,
+    longitude: float = None,
+    restaurant_name: str = None,
 ) -> List[Dict]:
     """
     Aggregate and consolidate menu items from multiple sources for a restaurant
@@ -232,6 +370,9 @@ def aggregate_menu_items(
         menu_items_list: List of menu item dictionaries from different menu images
         place_id: Restaurant place ID for context
         model: OpenAI model to use
+        latitude: Restaurant latitude for location context
+        longitude: Restaurant longitude for location context
+        restaurant_name: Restaurant name for additional context
 
     Returns:
         List of consolidated menu item dictionaries
@@ -247,12 +388,27 @@ def aggregate_menu_items(
         # Prepare the menu items as a JSON string for the LLM
         menu_data = json.dumps(menu_items_list, indent=2)
 
+        # Build location context for the prompt
+        location_context = ""
+        if latitude is not None and longitude is not None:
+            location_hints = _get_location_context(latitude, longitude)
+            location_context = f"""
+
+LOCATION CONTEXT:
+This restaurant is located at coordinates {latitude:.4f}, {longitude:.4f}.
+{location_hints}
+Use this location information when consolidating to ensure consistent local currency context and regional food preferences."""
+
+        restaurant_context = ""
+        if restaurant_name:
+            restaurant_context = f"\nRestaurant: {restaurant_name}"
+
         response = client.beta.chat.completions.parse(
             model=model,
             messages=[
                 {
                     "role": "system",
-                    "content": """You are an expert at consolidating restaurant menu data.
+                    "content": f"""You are an expert at consolidating restaurant menu data.
                     You will receive menu items extracted from multiple menu images for the same restaurant.
                     Your job is to create a clean, consolidated menu by:
                     
@@ -262,12 +418,13 @@ def aggregate_menu_items(
                     4. CATEGORIZATION: Assign consistent categories
                     5. PRICE RECONCILIATION: If prices differ for same item, use the most recent/reliable one
                     6. NUTRITIONAL CONSISTENCY: Ensure nutritional estimates are reasonable and consistent
+                    7. CURRENCY AWARENESS: Ensure prices are consistent with local currency expectations
                     
                     Prioritize accuracy over quantity - better to have fewer, accurate items than many duplicates.
                     Keep the best information from duplicates (most complete descriptions, prices, etc.).
                     
                     Common categories: appetizers, salads, soups, mains, pasta, pizza, burgers, sandwiches, 
-                    seafood, steaks, chicken, vegetarian, sides, desserts, beverages, etc.
+                    seafood, steaks, chicken, vegetarian, sides, desserts, beverages, etc.{location_context}{restaurant_context}
                     """,
                 },
                 {
@@ -276,7 +433,7 @@ def aggregate_menu_items(
 
 {menu_data}
 
-Return a clean, deduplicated list with the best information for each unique menu item.""",
+Return a clean, deduplicated list with the best information for each unique menu item. Pay attention to location context for appropriate pricing and cultural considerations.""",
                 },
             ],
             response_format=AggregatedMenu,

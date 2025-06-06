@@ -351,7 +351,7 @@ def test_end_to_end_processing():
     print("=" * 60)
 
     # Specific restaurant place ID to test
-    test_place_id = "ChIJH8DHxfXJlzMRAxuzFqd3S68"
+    test_place_id = "ChIJXZ2X9RTIlzMRtrFuMxGE6n8"
     print(f"🏪 Testing with restaurant place ID: {test_place_id}")
 
     try:
