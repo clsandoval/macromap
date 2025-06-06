@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -11,6 +11,57 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+// Map invalidation component to fix tile loading issues
+const MapInvalidator = () => {
+    const map = useMap();
+
+    useEffect(() => {
+        const invalidateMap = () => {
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        };
+
+        // Invalidate size when component mounts
+        invalidateMap();
+
+        // Also invalidate on window resize
+        window.addEventListener('resize', invalidateMap);
+
+        return () => {
+            window.removeEventListener('resize', invalidateMap);
+        };
+    }, [map]);
+
+    return null;
+};
+
+// Component to track map bounds changes
+const MapBoundsTracker = ({ onBoundsChange }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        const handleBoundsChange = () => {
+            const bounds = map.getBounds();
+            onBoundsChange(bounds);
+        };
+
+        // Initial bounds
+        handleBoundsChange();
+
+        // Listen for map events
+        map.on('moveend', handleBoundsChange);
+        map.on('zoomend', handleBoundsChange);
+
+        return () => {
+            map.off('moveend', handleBoundsChange);
+            map.off('zoomend', handleBoundsChange);
+        };
+    }, [map, onBoundsChange]);
+
+    return null;
+};
 
 // Create ranking icon with number
 const createRankingIcon = (ranking) => {
@@ -79,13 +130,14 @@ const getSortValue = (item, field) => {
         case 'name':
             return item.name?.toLowerCase() || '';
         case 'calories':
-            return item.nutrition?.calories || 0;
+            // Handle both backend format (flat) and potential nested format
+            return item.calories || item.nutrition?.calories || 0;
         case 'protein':
-            return item.nutrition?.protein || 0;
+            return item.protein || item.nutrition?.protein || 0;
         case 'carbs':
-            return item.nutrition?.carbs || 0;
+            return item.carbs || item.nutrition?.carbs || 0;
         case 'fat':
-            return item.nutrition?.fat || 0;
+            return item.fat || item.nutrition?.fat || 0;
         case 'price':
             return item.price || 0;
         case 'distance':
@@ -120,10 +172,27 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     const [showRatioNumeratorDropdown, setShowRatioNumeratorDropdown] = useState(false);
     const [showRatioDenominatorDropdown, setShowRatioDenominatorDropdown] = useState(false);
 
+    // New state for dynamic viewport filtering
+    const [currentMapBounds, setCurrentMapBounds] = useState(null);
+    const [showOnlyVisible, setShowOnlyVisible] = useState(true);
+    const [lastBoundsUpdate, setLastBoundsUpdate] = useState(Date.now());
+
     // Touch handling refs
     const touchStartY = useRef(0);
     const touchStartTime = useRef(0);
     const sidebarRef = useRef(null);
+
+    // Callback for handling map bounds changes
+    const handleBoundsChange = useCallback((bounds) => {
+        setCurrentMapBounds(bounds);
+        setLastBoundsUpdate(Date.now());
+    }, []);
+
+    // Function to check if a location is within the current map bounds
+    const isLocationInBounds = useCallback((location, bounds) => {
+        if (!bounds || !location) return true;
+        return bounds.contains([location.lat, location.lng]);
+    }, []);
 
     // Check if we're on mobile
     useEffect(() => {
@@ -270,14 +339,36 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         restaurantsWithDistance.forEach(restaurant => {
             if (restaurant.menuItems && restaurant.menuItems.length > 0) {
                 restaurant.menuItems.forEach(item => {
-                    items.push({
+                    // Normalize the menu item data structure to handle backend format
+                    const normalizedItem = {
                         ...item,
+                        // Ensure nutrition data is accessible in the expected format
+                        nutrition: {
+                            calories: item.calories || item.nutrition?.calories || 0,
+                            protein: item.protein || item.nutrition?.protein || 0,
+                            carbs: item.carbs || item.nutrition?.carbs || 0,
+                            fat: item.fat || item.nutrition?.fat || 0,
+                            fiber: item.fiber || item.nutrition?.fiber || 0,
+                            sugar: item.sugar || item.nutrition?.sugar || 0,
+                            sodium: item.sodium || item.nutrition?.sodium || 0,
+                        },
+                        // Handle availability field (backend uses is_available)
+                        available: item.is_available !== undefined ? item.is_available : (item.available !== undefined ? item.available : true),
+                        // Ensure price is a number
+                        price: parseFloat(item.price) || 0,
+                        // Handle dietary tags
+                        dietary_tags: item.dietary_tags || [],
+                        allergens: item.allergens || [],
+                        // Add restaurant context
                         restaurantName: restaurant.name,
                         restaurantDistance: restaurant.distance,
                         restaurantLocation: restaurant.location,
                         restaurantCategory: restaurant.category,
-                        restaurantRating: restaurant.rating
-                    });
+                        restaurantRating: restaurant.rating,
+                        // Ensure we have a unique ID
+                        id: item.id || `${restaurant.placeId}_${item.name}_${items.length}`,
+                    };
+                    items.push(normalizedItem);
                 });
             }
         });
@@ -286,8 +377,34 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
 
     // Sort restaurants
     const sortedRestaurants = useMemo(() => {
-        return [...restaurantsWithDistance].sort((a, b) => {
+        let restaurantsToSort = [...restaurantsWithDistance];
+
+        // If showOnlyVisible is true and we have map bounds, prioritize visible restaurants
+        if (showOnlyVisible && currentMapBounds) {
+            const visibleRestaurants = restaurantsToSort.filter(restaurant =>
+                isLocationInBounds(restaurant.location, currentMapBounds)
+            );
+            const hiddenRestaurants = restaurantsToSort.filter(restaurant =>
+                !isLocationInBounds(restaurant.location, currentMapBounds)
+            );
+
+            // If we have visible restaurants, prioritize them
+            if (visibleRestaurants.length > 0) {
+                restaurantsToSort = visibleRestaurants;
+            }
+        }
+
+        return restaurantsToSort.sort((a, b) => {
             let aValue, bValue;
+
+            // Add visibility boost for visible items when not filtering
+            const aVisible = !currentMapBounds || isLocationInBounds(a.location, currentMapBounds);
+            const bVisible = !currentMapBounds || isLocationInBounds(b.location, currentMapBounds);
+
+            // If one is visible and the other isn't, prioritize the visible one
+            if (!showOnlyVisible && aVisible !== bVisible) {
+                return bVisible ? 1 : -1;
+            }
 
             switch (sortField) {
                 case 'name':
@@ -321,12 +438,38 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                 return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
             }
         });
-    }, [restaurantsWithDistance, sortField, sortDirection]);
+    }, [restaurantsWithDistance, sortField, sortDirection, currentMapBounds, showOnlyVisible, isLocationInBounds, lastBoundsUpdate]);
 
     // Sort menu items
     const sortedMenuItems = useMemo(() => {
-        return [...allMenuItems].sort((a, b) => {
+        let menuItemsToSort = [...allMenuItems];
+
+        // If showOnlyVisible is true and we have map bounds, prioritize visible menu items
+        if (showOnlyVisible && currentMapBounds) {
+            const visibleMenuItems = menuItemsToSort.filter(item =>
+                isLocationInBounds(item.restaurantLocation, currentMapBounds)
+            );
+            const hiddenMenuItems = menuItemsToSort.filter(item =>
+                !isLocationInBounds(item.restaurantLocation, currentMapBounds)
+            );
+
+            // If we have visible menu items, prioritize them
+            if (visibleMenuItems.length > 0) {
+                menuItemsToSort = visibleMenuItems;
+            }
+        }
+
+        return menuItemsToSort.sort((a, b) => {
             let aValue, bValue;
+
+            // Add visibility boost for visible items when not filtering
+            const aVisible = !currentMapBounds || isLocationInBounds(a.restaurantLocation, currentMapBounds);
+            const bVisible = !currentMapBounds || isLocationInBounds(b.restaurantLocation, currentMapBounds);
+
+            // If one is visible and the other isn't, prioritize the visible one
+            if (!showOnlyVisible && aVisible !== bVisible) {
+                return bVisible ? 1 : -1;
+            }
 
             if (sortField === 'ratio') {
                 aValue = calculateRatio(a, ratioNumerator, ratioDenominator);
@@ -342,7 +485,85 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                 return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
             }
         });
-    }, [allMenuItems, sortField, sortDirection, ratioNumerator, ratioDenominator]);
+    }, [allMenuItems, sortField, sortDirection, ratioNumerator, ratioDenominator, currentMapBounds, showOnlyVisible, isLocationInBounds, lastBoundsUpdate]);
+
+    // Get full sorted lists for context (when showing all items)
+    const allSortedRestaurants = useMemo(() => {
+        return [...restaurantsWithDistance].sort((a, b) => {
+            let aValue, bValue;
+
+            // Add visibility boost for visible items
+            const aVisible = !currentMapBounds || isLocationInBounds(a.location, currentMapBounds);
+            const bVisible = !currentMapBounds || isLocationInBounds(b.location, currentMapBounds);
+
+            // If one is visible and the other isn't, prioritize the visible one
+            if (aVisible !== bVisible) {
+                return bVisible ? 1 : -1;
+            }
+
+            switch (sortField) {
+                case 'name':
+                    aValue = a.name.toLowerCase();
+                    bValue = b.name.toLowerCase();
+                    break;
+                case 'rating':
+                    aValue = a.rating || 0;
+                    bValue = b.rating || 0;
+                    break;
+                case 'reviewsCount':
+                    aValue = a.reviewsCount || 0;
+                    bValue = b.reviewsCount || 0;
+                    break;
+                case 'distance':
+                    aValue = a.distance;
+                    bValue = b.distance;
+                    break;
+                case 'priceLevel':
+                    aValue = a.priceLevel ? a.priceLevel.length : 0;
+                    bValue = b.priceLevel ? b.priceLevel.length : 0;
+                    break;
+                default:
+                    aValue = a.distance;
+                    bValue = b.distance;
+            }
+
+            if (sortDirection === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            }
+        });
+    }, [restaurantsWithDistance, sortField, sortDirection, currentMapBounds, isLocationInBounds, lastBoundsUpdate]);
+
+    // Get full sorted menu items for context (when showing all items)
+    const allSortedMenuItems = useMemo(() => {
+        return [...allMenuItems].sort((a, b) => {
+            let aValue, bValue;
+
+            // Add visibility boost for visible items
+            const aVisible = !currentMapBounds || isLocationInBounds(a.restaurantLocation, currentMapBounds);
+            const bVisible = !currentMapBounds || isLocationInBounds(b.restaurantLocation, currentMapBounds);
+
+            // If one is visible and the other isn't, prioritize the visible one
+            if (aVisible !== bVisible) {
+                return bVisible ? 1 : -1;
+            }
+
+            if (sortField === 'ratio') {
+                aValue = calculateRatio(a, ratioNumerator, ratioDenominator);
+                bValue = calculateRatio(b, ratioNumerator, ratioDenominator);
+            } else {
+                aValue = getSortValue(a, sortField);
+                bValue = getSortValue(b, sortField);
+            }
+
+            if (sortDirection === 'asc') {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            } else {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            }
+        });
+    }, [allMenuItems, sortField, sortDirection, ratioNumerator, ratioDenominator, currentMapBounds, isLocationInBounds, lastBoundsUpdate]);
 
     // Calculate map bounds
     const bounds = useMemo(() => {
@@ -356,6 +577,11 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         return L.latLngBounds(allLocations.map(loc => [loc.lat, loc.lng]));
     }, [restaurants, restaurantsWithDistance, userLocation]);
 
+    // Generate a unique key for the MapContainer to force re-render when needed
+    const mapKey = useMemo(() => {
+        return `map-${restaurants?.length || 0}-${userLocation?.lat || 0}-${userLocation?.lng || 0}`;
+    }, [restaurants, userLocation]);
+
     // Determine if we should show rankings (when sorted by anything other than distance)
     const shouldShowRankings = useMemo(() => {
         return sortField !== 'distance';
@@ -364,21 +590,24 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     // Calculate restaurant rankings for restaurant view
     const restaurantRankings = useMemo(() => {
         const rankings = new Map();
-        sortedRestaurants.forEach((restaurant, index) => {
+        const listToUse = showOnlyVisible ? sortedRestaurants : allSortedRestaurants;
+
+        listToUse.forEach((restaurant, index) => {
             rankings.set(restaurant.name, index + 1);
         });
 
         return rankings;
-    }, [sortedRestaurants]);
+    }, [sortedRestaurants, allSortedRestaurants, showOnlyVisible]);
 
     // Calculate restaurant rankings for menu items view (based on highest ranking menu item)
     const menuItemRestaurantRankings = useMemo(() => {
         if (viewMode !== 'menu_items') return new Map();
 
         const restaurantBestRankings = new Map();
+        const listToUse = showOnlyVisible ? sortedMenuItems : allSortedMenuItems;
 
         // Find the best (lowest index = highest ranking) menu item for each restaurant
-        sortedMenuItems.forEach((item, index) => {
+        listToUse.forEach((item, index) => {
             const restaurantName = item.restaurantName;
             if (!restaurantBestRankings.has(restaurantName)) {
                 restaurantBestRankings.set(restaurantName, index + 1);
@@ -386,7 +615,33 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
         });
 
         return restaurantBestRankings;
-    }, [sortedMenuItems, viewMode]);
+    }, [sortedMenuItems, allSortedMenuItems, viewMode, showOnlyVisible]);
+
+    // Count visible items
+    const visibleCounts = useMemo(() => {
+        if (!currentMapBounds) {
+            return {
+                restaurants: restaurantsWithDistance.length,
+                menuItems: allMenuItems.length,
+                totalRestaurants: restaurantsWithDistance.length,
+                totalMenuItems: allMenuItems.length
+            };
+        }
+
+        const visibleRestaurants = restaurantsWithDistance.filter(restaurant =>
+            isLocationInBounds(restaurant.location, currentMapBounds)
+        );
+        const visibleMenuItems = allMenuItems.filter(item =>
+            isLocationInBounds(item.restaurantLocation, currentMapBounds)
+        );
+
+        return {
+            restaurants: visibleRestaurants.length,
+            menuItems: visibleMenuItems.length,
+            totalRestaurants: restaurantsWithDistance.length,
+            totalMenuItems: allMenuItems.length
+        };
+    }, [restaurantsWithDistance, allMenuItems, currentMapBounds, isLocationInBounds, lastBoundsUpdate]);
 
     // Early return after all hooks are declared
     if (!restaurants || restaurants.length === 0) {
@@ -453,109 +708,204 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
     // Render restaurants view
     const renderRestaurantsView = () => (
         <div className="restaurant-list">
-            {sortedRestaurants.map((restaurant, index) => (
-                <div
-                    key={index}
-                    className={`restaurant-item ${selectedRestaurant === index ? 'selected' : ''}`}
-                    onClick={() => setSelectedRestaurant(selectedRestaurant === index ? null : index)}
-                >
-                    <div className="restaurant-item-header">
-                        <h4 className="restaurant-name">{restaurant.name}</h4>
-                        <div className="restaurant-distance">{formatDistance(restaurant.distance)}</div>
-                    </div>
+            {(showOnlyVisible ? sortedRestaurants : allSortedRestaurants).map((restaurant, index) => {
+                const isVisible = !currentMapBounds || isLocationInBounds(restaurant.location, currentMapBounds);
+                const ranking = restaurantRankings.get(restaurant.name);
 
-                    <div className="restaurant-item-details">
-                        <div className="restaurant-meta">
-                            <span className="restaurant-rating">{formatRating(restaurant.rating)}</span>
-                            {restaurant.reviewsCount > 0 && (
-                                <span className="restaurant-reviews">({restaurant.reviewsCount})</span>
-                            )}
-                            <span className="restaurant-price">{formatPriceLevel(restaurant.priceLevel)}</span>
-                        </div>
-                        <div className="restaurant-category">{restaurant.category}</div>
-                        <div className="menu-items-count">
-                            {restaurant.menuItems?.length || 0} menu items
-                        </div>
-                    </div>
+                return (
+                    <div
+                        key={restaurant.placeId || index}
+                        className={`restaurant-item ${!isVisible ? 'not-visible' : ''} ${selectedRestaurant === restaurant ? 'selected' : ''}`}
+                        onClick={() => setSelectedRestaurant(selectedRestaurant === restaurant ? null : restaurant)}
+                    >
+                        <div className="restaurant-item-header">
+                            <div className="restaurant-name-section">
+                                {shouldShowRankings && ranking && (
+                                    <span className="restaurant-ranking">#{ranking}</span>
+                                )}
+                                <h4 className="restaurant-name">{restaurant.name}</h4>
+                                {!showOnlyVisible && (
+                                    <span className={`visibility-indicator ${isVisible ? 'visible' : 'hidden'}`}>
+                                        {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="restaurant-distance">{formatDistance(restaurant.distance)}</div>
 
-                    {selectedRestaurant === index && (
-                        <div className="restaurant-item-expanded">
-                            <p className="restaurant-address">{restaurant.address}</p>
-                            {restaurant.phone && (
-                                <p className="restaurant-phone">📞 {restaurant.phone}</p>
-                            )}
-                            {restaurant.website && (
-                                <p className="restaurant-website">
-                                    <a href={restaurant.website} target="_blank" rel="noopener noreferrer">
-                                        🌐 Visit Website
-                                    </a>
-                                </p>
-                            )}
-                            {restaurant.url && (
-                                <p className="restaurant-maps">
-                                    <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
-                                        📍 View on Google Maps
-                                    </a>
-                                </p>
+                            {/* Show processing status if not finished */}
+                            {restaurant.processing_status && restaurant.processing_status !== 'finished' && (
+                                <div className="processing-status">
+                                    <span className={`status-badge ${restaurant.processing_status}`}>
+                                        {restaurant.processing_status === 'pending' && '⏳ Processing Menu'}
+                                        {restaurant.processing_status === 'processing' && '🔄 Extracting Items'}
+                                        {restaurant.processing_status === 'new' && '🆕 New'}
+                                    </span>
+                                </div>
                             )}
                         </div>
-                    )}
+
+                        <div className="restaurant-item-details">
+                            <div className="restaurant-meta">
+                                <span className="restaurant-rating">{formatRating(restaurant.rating)}</span>
+                                {restaurant.reviewsCount > 0 && (
+                                    <span className="restaurant-reviews">({restaurant.reviewsCount})</span>
+                                )}
+                                <span className="restaurant-price">{formatPriceLevel(restaurant.priceLevel)}</span>
+                            </div>
+                            <div className="restaurant-category">{restaurant.category}</div>
+                            <div className="menu-items-count">
+                                {restaurant.menuItems?.length || 0} menu items
+                                {restaurant.has_menu_items === false && restaurant.processing_status === 'finished' && (
+                                    <span className="no-menu-badge"> (No menu available)</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {selectedRestaurant === restaurant && (
+                            <div className="restaurant-item-expanded">
+                                <p className="restaurant-address">{restaurant.address}</p>
+                                {restaurant.phone && (
+                                    <p className="restaurant-phone">📞 {restaurant.phone}</p>
+                                )}
+                                {restaurant.website && (
+                                    <p className="restaurant-website">
+                                        <a href={restaurant.website} target="_blank" rel="noopener noreferrer">
+                                            🌐 Visit Website
+                                        </a>
+                                    </p>
+                                )}
+                                {restaurant.url && (
+                                    <p className="restaurant-maps">
+                                        <a href={restaurant.url} target="_blank" rel="noopener noreferrer">
+                                            📍 View on Google Maps
+                                        </a>
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+            {sortedRestaurants.length === 0 && showOnlyVisible && (
+                <div className="no-results">
+                    <p>No restaurants visible in current map view.</p>
+                    <p>Try zooming out or toggle "Show All" to see more options.</p>
                 </div>
-            ))}
+            )}
         </div>
     );
 
     // Render menu items view
     const renderMenuItemsView = () => (
         <div className="menu-items-list">
-            {sortedMenuItems.map((item, index) => (
-                <div
-                    key={item.id || index}
-                    className={`menu-item ${!item.available ? 'unavailable' : ''}`}
-                >
-                    <div className="menu-item-header">
-                        <div className="menu-item-main">
-                            <h4 className="menu-item-name">{item.name}</h4>
-                            <div className="menu-item-restaurant">{item.restaurantName}</div>
-                        </div>
-                        <div className="menu-item-price">${item.price}</div>
-                    </div>
-
-                    <div className="menu-item-nutrition">
-                        <div className="nutrition-main">
-                            <span className="calories">{item.nutrition?.calories || 0} cal</span>
-                            <span className="protein">{item.nutrition?.protein || 0}g protein</span>
-                            <span className="carbs">{item.nutrition?.carbs || 0}g carbs</span>
-                            <span className="fat">{item.nutrition?.fat || 0}g fat</span>
-                        </div>
-                        {sortField === 'ratio' && (
-                            <div className="ratio-display">
-                                <span className="ratio-value">
-                                    📊 {formatRatio(item, ratioNumerator, ratioDenominator)}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {item.dietary_tags && item.dietary_tags.length > 0 && (
-                        <div className="dietary-tags">
-                            {item.dietary_tags.map((tag, tagIndex) => (
-                                <span key={tagIndex} className="dietary-tag">{tag}</span>
-                            ))}
-                        </div>
-                    )}
-
-                    <div className="menu-item-meta">
-                        <span className="restaurant-distance">{formatDistance(item.restaurantDistance)}</span>
-                        {item.spice_level && (
-                            <span className="spice-level">🌶️ {item.spice_level}</span>
-                        )}
-                        {!item.available && (
-                            <span className="unavailable-badge">Currently Unavailable</span>
-                        )}
-                    </div>
+            {sortedMenuItems.length === 0 && showOnlyVisible ? (
+                <div className="no-results">
+                    <p>No menu items visible in current map view.</p>
+                    <p>Try zooming out or toggle "Show All" to see more options.</p>
                 </div>
-            ))}
+            ) : (showOnlyVisible ? sortedMenuItems : allSortedMenuItems).length === 0 ? (
+                <div className="no-menu-items">
+                    <p>No menu items available yet.</p>
+                    <p>Menu processing may still be in progress for some restaurants.</p>
+                </div>
+            ) : (
+                (showOnlyVisible ? sortedMenuItems : allSortedMenuItems).map((item, index) => {
+                    const isVisible = !currentMapBounds || isLocationInBounds(item.restaurantLocation, currentMapBounds);
+
+                    return (
+                        <div
+                            key={item.id || index}
+                            className={`menu-item ${!item.available ? 'unavailable' : ''} ${!isVisible ? 'not-visible' : ''}`}
+                        >
+                            <div className="menu-item-header">
+                                <div className="menu-item-main">
+                                    <div className="menu-item-name-section">
+                                        {shouldShowRankings && (
+                                            <span className="menu-item-ranking">#{index + 1}</span>
+                                        )}
+                                        <h4 className="menu-item-name">{item.name}</h4>
+                                        {!showOnlyVisible && (
+                                            <span className={`visibility-indicator ${isVisible ? 'visible' : 'hidden'}`}>
+                                                {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="menu-item-restaurant">{item.restaurantName}</div>
+                                    {item.description && (
+                                        <div className="menu-item-description">{item.description}</div>
+                                    )}
+                                </div>
+                                <div className="menu-item-price">
+                                    ${typeof item.price === 'number' ? item.price.toFixed(2) : (parseFloat(item.price) || 0).toFixed(2)}
+                                    {item.currency && item.currency !== 'USD' && (
+                                        <span className="currency"> {item.currency}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="menu-item-nutrition">
+                                <div className="nutrition-main">
+                                    <span className="calories">{item.nutrition?.calories || item.calories || 0} cal</span>
+                                    <span className="protein">{item.nutrition?.protein || item.protein || 0}g protein</span>
+                                    <span className="carbs">{item.nutrition?.carbs || item.carbs || 0}g carbs</span>
+                                    <span className="fat">{item.nutrition?.fat || item.fat || 0}g fat</span>
+                                </div>
+                                {(item.nutrition?.fiber || item.fiber) && (
+                                    <div className="nutrition-additional">
+                                        <span className="fiber">{item.nutrition?.fiber || item.fiber}g fiber</span>
+                                        {(item.nutrition?.sugar || item.sugar) && (
+                                            <span className="sugar">{item.nutrition?.sugar || item.sugar}g sugar</span>
+                                        )}
+                                        {(item.nutrition?.sodium || item.sodium) && (
+                                            <span className="sodium">{item.nutrition?.sodium || item.sodium}mg sodium</span>
+                                        )}
+                                    </div>
+                                )}
+                                {sortField === 'ratio' && (
+                                    <div className="ratio-display">
+                                        <span className="ratio-value">
+                                            📊 {formatRatio(item, ratioNumerator, ratioDenominator)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {item.dietary_tags && item.dietary_tags.length > 0 && (
+                                <div className="dietary-tags">
+                                    {item.dietary_tags.map((tag, tagIndex) => (
+                                        <span key={tagIndex} className="dietary-tag">{tag}</span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {item.allergens && item.allergens.length > 0 && (
+                                <div className="allergen-info">
+                                    <span className="allergens-label">⚠️ Contains: </span>
+                                    {item.allergens.map((allergen, allergenIndex) => (
+                                        <span key={allergenIndex} className="allergen-tag">{allergen}</span>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="menu-item-meta">
+                                <span className="restaurant-distance">{formatDistance(item.restaurantDistance)}</span>
+                                {item.spice_level && (
+                                    <span className="spice-level">🌶️ {item.spice_level}</span>
+                                )}
+                                {item.category && (
+                                    <span className="menu-category">{item.category}</span>
+                                )}
+                                {!item.available && (
+                                    <span className="unavailable-badge">Currently Unavailable</span>
+                                )}
+                                {item.seasonal && (
+                                    <span className="seasonal-badge">🍂 Seasonal</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })
+            )}
         </div>
     );
 
@@ -752,41 +1102,66 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                         <div className="sidebar-header" onClick={handleSidebarHeaderClick}>
                             <h3>
                                 {viewMode === 'restaurants'
-                                    ? `Restaurant List (${sortedRestaurants.length})`
-                                    : `Menu Items (${sortedMenuItems.length})`
+                                    ? showOnlyVisible
+                                        ? `Visible Restaurants (${visibleCounts.restaurants}${visibleCounts.restaurants !== visibleCounts.totalRestaurants ? `/${visibleCounts.totalRestaurants}` : ''})`
+                                        : `All Restaurants (${visibleCounts.totalRestaurants})`
+                                    : showOnlyVisible
+                                        ? `Visible Menu Items (${visibleCounts.menuItems}${visibleCounts.menuItems !== visibleCounts.totalMenuItems ? `/${visibleCounts.totalMenuItems}` : ''})`
+                                        : `All Menu Items (${visibleCounts.totalMenuItems})`
                                 }
                             </h3>
-                            <div className="sort-controls">
-                                <span className="sort-label">Sort by:</span>
-                                <div className="sort-dropdown-container">
-                                    {isMobile ? (
-                                        <MobileDropdown />
-                                    ) : (
-                                        <select
-                                            value={sortField}
-                                            onChange={handleSortChange}
-                                            className="sort-dropdown"
-                                        >
-                                            {viewMode === 'restaurants' ? (
-                                                <>
-                                                    <option value="distance">Distance</option>
-                                                    <option value="rating">Rating</option>
-                                                    <option value="name">Name</option>
-                                                    <option value="priceLevel">Price</option>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <option value="calories">Calories</option>
-                                                    <option value="protein">Protein</option>
-                                                    <option value="price">Price</option>
-                                                    <option value="distance">Distance</option>
-                                                    <option value="ratio">📊 Ratio</option>
-                                                </>
-                                            )}
-                                        </select>
-                                    )}
-                                    <div className="sort-direction-indicator">
-                                        {sortDirection === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+
+                            <div className="header-controls">
+                                {/* Viewport Filter Toggle */}
+                                <div className="viewport-toggle">
+                                    <button
+                                        type="button"
+                                        className={`viewport-toggle-btn ${showOnlyVisible ? 'active' : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowOnlyVisible(!showOnlyVisible);
+                                        }}
+                                        title={showOnlyVisible ? 'Show all items' : 'Show only visible items'}
+                                    >
+                                        {showOnlyVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+                                        <span className="toggle-text">
+                                            {showOnlyVisible ? 'Visible' : 'All'}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <div className="sort-controls">
+                                    <span className="sort-label">Sort by:</span>
+                                    <div className="sort-dropdown-container">
+                                        {isMobile ? (
+                                            <MobileDropdown />
+                                        ) : (
+                                            <select
+                                                value={sortField}
+                                                onChange={handleSortChange}
+                                                className="sort-dropdown"
+                                            >
+                                                {viewMode === 'restaurants' ? (
+                                                    <>
+                                                        <option value="distance">Distance</option>
+                                                        <option value="rating">Rating</option>
+                                                        <option value="name">Name</option>
+                                                        <option value="priceLevel">Price</option>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <option value="calories">Calories</option>
+                                                        <option value="protein">Protein</option>
+                                                        <option value="price">Price</option>
+                                                        <option value="distance">Distance</option>
+                                                        <option value="ratio">📊 Ratio</option>
+                                                    </>
+                                                )}
+                                            </select>
+                                        )}
+                                        <div className="sort-direction-indicator">
+                                            {sortDirection === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -844,19 +1219,31 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                     <div className="map-section">
                         {bounds && (
                             <MapContainer
-                                key="restaurant-map"
+                                key={mapKey}
                                 bounds={bounds}
                                 boundsOptions={{ padding: [20, 20] }}
                                 style={{ height: '100%', width: '100%' }}
                                 className="restaurant-map"
                                 zoomControl={true}
-                                preferCanvas={true}
+                                preferCanvas={false}
+                                worldCopyJump={true}
+                                maxBounds={[[-90, -180], [90, 180]]}
+                                maxBoundsViscosity={1.0}
                             >
+                                <MapInvalidator />
+                                <MapBoundsTracker onBoundsChange={handleBoundsChange} />
                                 <TileLayer
                                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                                     url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                                     subdomains="abcd"
                                     maxZoom={20}
+                                    minZoom={1}
+                                    tileSize={256}
+                                    zoomOffset={0}
+                                    detectRetina={true}
+                                    updateWhenIdle={false}
+                                    updateWhenZooming={true}
+                                    keepBuffer={2}
                                 />
 
                                 {/* User location marker */}
@@ -869,7 +1256,9 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                 </Marker>
 
                                 {/* Restaurant markers */}
-                                {sortedRestaurants.map((restaurant, index) => {
+                                {(showOnlyVisible ? sortedRestaurants : allSortedRestaurants).map((restaurant, index) => {
+                                    const isVisible = !currentMapBounds || isLocationInBounds(restaurant.location, currentMapBounds);
+
                                     // Determine which icon to use
                                     let markerIcon;
                                     if (shouldShowRankings) {
@@ -886,15 +1275,24 @@ const RestaurantMap = ({ restaurants, userLocation, onClose }) => {
                                         markerIcon = restaurantIcon;
                                     }
 
+                                    // Add opacity for non-visible restaurants when showing all
+                                    const markerOpacity = !showOnlyVisible && !isVisible ? 0.4 : 1.0;
+
                                     return (
                                         <Marker
-                                            key={`${index}-${shouldShowRankings}-${viewMode}-${sortField}-${sortDirection}`}
+                                            key={`${restaurant.placeId}-${index}-${shouldShowRankings}-${viewMode}-${sortField}-${sortDirection}-${showOnlyVisible}`}
                                             position={[restaurant.location.lat, restaurant.location.lng]}
                                             icon={markerIcon}
+                                            opacity={markerOpacity}
                                         >
                                             <Popup>
                                                 <div className="popup-content">
                                                     <h3>{restaurant.name}</h3>
+                                                    {shouldShowRankings && restaurantRankings.get(restaurant.name) && (
+                                                        <p className="popup-ranking">
+                                                            #{restaurantRankings.get(restaurant.name)} in current {viewMode === 'restaurants' ? 'restaurant' : 'menu item'} ranking
+                                                        </p>
+                                                    )}
                                                     <p className="restaurant-category">{restaurant.category}</p>
                                                     <p className="restaurant-rating">
                                                         {formatRating(restaurant.rating)}

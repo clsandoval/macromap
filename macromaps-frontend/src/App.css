@@ -871,14 +871,48 @@ body {
 .restaurant-map {
   border-radius: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  height: 100% !important;
+  width: 100% !important;
 }
 
-/* Improve map rendering quality */
+/* Improve map rendering quality and fix tile loading */
 .restaurant-map .leaflet-container {
   background-color: #ffffff;
   font-family: inherit;
+  height: 100% !important;
+  width: 100% !important;
 }
 
+.map-section {
+  flex: 1;
+  min-height: 400px;
+  position: relative;
+  background-color: #1f2937;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix map tile loading issues */
+.restaurant-map .leaflet-tile-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.restaurant-map .leaflet-tile {
+  width: 256px !important;
+  height: 256px !important;
+}
+
+/* Ensure tile layers load properly */
+.restaurant-map .leaflet-layer {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fix for tile loading delays */
+.restaurant-map .leaflet-tile-loaded {
+  opacity: 1 !important;
+}
 
 /* Customize zoom controls */
 .restaurant-map .leaflet-control-zoom {
@@ -1850,5 +1884,406 @@ body {
     color: #22c55e;
     padding: 0 0.25rem;
     margin: 0 0.25rem;
+  }
+}
+
+/* Processing Status Badges */
+.processing-status {
+  margin-top: 0.25rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.status-badge.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.status-badge.processing {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #3b82f6;
+}
+
+.status-badge.new {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #10b981;
+}
+
+.no-menu-badge {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+/* No Menu Items Message */
+.no-menu-items {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  background-color: #1f2937;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.no-menu-items p {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.no-menu-items p:first-child {
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+/* Menu Item Description */
+.menu-item-description {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+  line-height: 1.3;
+}
+
+/* Currency Display */
+.currency {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-left: 0.125rem;
+}
+
+/* Additional Nutrition Info */
+.nutrition-additional {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.nutrition-additional span {
+  padding: 0.125rem 0.25rem;
+  background-color: #374151;
+  border-radius: 0.25rem;
+  border: 1px solid #4b5563;
+}
+
+.fiber {
+  border-color: #8b5cf6 !important;
+  color: #c4b5fd !important;
+}
+
+.sugar {
+  border-color: #f59e0b !important;
+  color: #fcd34d !important;
+}
+
+.sodium {
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+}
+
+/* Allergen Information */
+.allergen-info {
+  margin-top: 0.5rem;
+  padding: 0.375rem;
+  background-color: #451a03;
+  border: 1px solid #ea580c;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+}
+
+.allergens-label {
+  color: #fed7aa;
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.allergen-tag {
+  display: inline-block;
+  padding: 0.125rem 0.25rem;
+  margin: 0.125rem 0.125rem 0.125rem 0;
+  background-color: #ea580c;
+  color: #ffffff;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+}
+
+/* Menu Category */
+.menu-category {
+  color: #a78bfa;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  background-color: #2d1b69;
+  border-radius: 0.25rem;
+  border: 1px solid #7c3aed;
+}
+
+/* Seasonal Badge */
+.seasonal-badge {
+  color: #fbbf24;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  background-color: #451a03;
+  border-radius: 0.25rem;
+  border: 1px solid #f59e0b;
+}
+
+/* Mobile Responsive Adjustments for New Elements */
+@media (max-width: 768px) {
+  .processing-status {
+    margin-top: 0.125rem;
+  }
+
+  .status-badge {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .nutrition-additional {
+    font-size: 0.625rem;
+    gap: 0.25rem;
+  }
+
+  .nutrition-additional span {
+    padding: 0.0625rem 0.125rem;
+  }
+
+  .allergen-info {
+    padding: 0.25rem;
+    font-size: 0.625rem;
+  }
+
+  .allergen-tag {
+    font-size: 0.5rem;
+    padding: 0.0625rem 0.125rem;
+  }
+
+  .menu-category,
+  .seasonal-badge {
+    font-size: 0.625rem;
+    padding: 0.0625rem 0.125rem;
+  }
+
+  .menu-item-description {
+    font-size: 0.625rem;
+    margin-top: 0.125rem;
+  }
+}
+
+/* Dark theme adjustments for new elements */
+@media (prefers-color-scheme: dark) {
+  .status-badge.pending {
+    background-color: #451a03;
+    color: #fcd34d;
+    border-color: #f59e0b;
+  }
+
+  .status-badge.processing {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+    border-color: #3b82f6;
+  }
+
+  .status-badge.new {
+    background-color: #064e3b;
+    color: #6ee7b7;
+    border-color: #10b981;
+  }
+}
+
+/* New Dynamic Filtering Styles */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.viewport-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.viewport-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background-color: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 0.375rem;
+  color: #d1d5db;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewport-toggle-btn:hover {
+  background-color: #4b5563;
+  border-color: #6b7280;
+}
+
+.viewport-toggle-btn.active {
+  background-color: #3b82f6;
+  border-color: #2563eb;
+  color: white;
+}
+
+.toggle-text {
+  font-weight: 500;
+}
+
+.restaurant-name-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.menu-item-name-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.restaurant-ranking,
+.menu-item-ranking {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.visibility-indicator {
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+  margin-left: auto;
+}
+
+.visibility-indicator.visible {
+  color: #10b981;
+}
+
+.visibility-indicator.hidden {
+  color: #6b7280;
+}
+
+.restaurant-item.not-visible,
+.menu-item.not-visible {
+  opacity: 0.6;
+  background-color: #1f2937;
+}
+
+.restaurant-item.not-visible .restaurant-name,
+.menu-item.not-visible .menu-item-name {
+  color: #9ca3af;
+}
+
+.no-results {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  background-color: #1f2937;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.no-results p {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.no-results p:first-child {
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.popup-ranking {
+  color: #3b82f6;
+  font-weight: 600;
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+  .header-controls {
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .viewport-toggle-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .restaurant-ranking,
+  .menu-item-ranking {
+    padding: 0.0625rem 0.25rem;
+    font-size: 0.625rem;
+    min-width: 1.5rem;
+  }
+
+  .visibility-indicator svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .restaurant-name-section,
+  .menu-item-name-section {
+    gap: 0.25rem;
+  }
+
+  .no-results {
+    padding: 1rem 0.5rem;
+  }
+
+  .no-results p {
+    font-size: 0.75rem;
+  }
+}
+
+/* Ensure sidebar header layout works with new controls */
+.sidebar-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  flex: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-header {
+    gap: 0.25rem;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+
+  .sort-controls {
+    justify-content: space-between;
   }
 }

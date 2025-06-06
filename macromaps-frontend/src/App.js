@@ -74,10 +74,24 @@ function App() {
         setRestaurants(data.restaurants);
         setShowMap(true);
 
-        // Also show a brief success message
+        // Show informative success message with processing summary
         const restaurantCount = data.restaurants.length;
         const modeText = data.mock ? ' (using mock data)' : '';
-        console.log(`Found ${restaurantCount} restaurants nearby${modeText}! Opening map view...`);
+
+        // Log processing summary if available
+        if (data.processing_summary && !data.mock) {
+          const summary = data.processing_summary;
+          console.log(`Found ${restaurantCount} restaurants nearby${modeText}!`);
+          console.log(`Processing Status: ${summary.completed} completed, ${summary.pending} pending, ${summary.processing} processing, ${summary.new} new`);
+          console.log(`${summary.restaurants_with_menu} restaurants have menu items available`);
+
+          // Show brief status message if some restaurants are still processing
+          if (summary.pending > 0 || summary.processing > 0 || summary.new > 0) {
+            console.log('Some restaurants are still processing menus - check back in a few minutes for more menu items!');
+          }
+        } else {
+          console.log(`Found ${restaurantCount} restaurants nearby${modeText}! Opening map view...`);
+        }
       } else if (data.error) {
         // Handle backend error responses
         setError(data.error);
