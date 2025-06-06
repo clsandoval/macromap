@@ -134,6 +134,10 @@ class RestaurantProcessor:
         for place_id in place_ids:
             self.update_restaurant_status(place_id, "processing")
 
+        # Add a small delay to ensure database writes are committed
+        time.sleep(1.0)
+        logger.info("Database status updates completed, starting menu processing...")
+
         # Process restaurants in parallel
         with ThreadPoolExecutor(
             max_workers=self.max_concurrent_restaurants
@@ -252,7 +256,7 @@ def trigger_restaurant_processing(restaurants_data: List[Dict]) -> Dict[str, any
         if response.data:
             status_map = {row["place_id"]: row["status"] for row in response.data}
 
-        # Filter out restaurants that are already complete or pending
+        # Filter out restaurants that are already finished or currently processing
         place_ids_to_process = []
         skipped_restaurants = []
 
@@ -261,25 +265,29 @@ def trigger_restaurant_processing(restaurants_data: List[Dict]) -> Dict[str, any
                 place_id, "new"
             )  # Default to "new" if not in DB
 
-            if current_status in ["complete", "pending"]:
+            # Skip restaurants that are already finished or currently being processed
+            if current_status in ["finished", "processing"]:
                 skipped_restaurants.append(place_id)
                 logger.info(
                     f"Skipping restaurant {place_id} - status: {current_status}"
                 )
             else:
+                # Process restaurants with status: pending, new, error
                 place_ids_to_process.append(place_id)
                 logger.info(
                     f"Will process restaurant {place_id} - status: {current_status}"
                 )
 
         if not place_ids_to_process:
-            logger.info("No restaurants need processing - all are complete or pending")
+            logger.info(
+                "No restaurants need processing - all are finished or currently processing"
+            )
             return {
                 "triggered": False,
                 "restaurants_count": len(place_ids),
                 "restaurants_to_process": 0,
                 "skipped_count": len(skipped_restaurants),
-                "message": f"All {len(place_ids)} restaurants are already complete or pending processing",
+                "message": f"All {len(place_ids)} restaurants are already finished or processing",
                 "skipped_statuses": {
                     pid: status_map.get(pid, "new") for pid in skipped_restaurants
                 },
@@ -297,7 +305,7 @@ def trigger_restaurant_processing(restaurants_data: List[Dict]) -> Dict[str, any
             "restaurants_count": len(place_ids),
             "restaurants_to_process": len(place_ids_to_process),
             "skipped_count": len(skipped_restaurants),
-            "message": f"Menu processing started for {len(place_ids_to_process)} restaurants (skipped {len(skipped_restaurants)} already complete/pending)",
+            "message": f"Menu processing started for {len(place_ids_to_process)} restaurants (skipped {len(skipped_restaurants)} already finished/processing)",
             "skipped_statuses": {
                 pid: status_map.get(pid, "new") for pid in skipped_restaurants
             },

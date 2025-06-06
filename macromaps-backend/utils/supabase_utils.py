@@ -1,5 +1,6 @@
 import os
 import math
+from datetime import datetime
 from supabase import create_client, Client
 
 # Supabase configuration
@@ -386,3 +387,93 @@ def check_restaurant_processing_status(place_ids):
     except Exception as e:
         print(f"Error querying Supabase: {str(e)}")
         return {}, f"Database query failed: {str(e)}"
+
+
+def save_restaurants_to_database(restaurants_data):
+    """
+    Save restaurant data to Supabase database
+
+    Args:
+        restaurants_data: List of restaurant dictionaries from Apify
+
+    Returns:
+        tuple: (success_count, error_message)
+    """
+    if not restaurants_data:
+        return 0, "No restaurants to save"
+
+    try:
+        restaurants_to_upsert = []
+
+        for restaurant in restaurants_data:
+            # Extract location data
+            location = restaurant.get("location", {})
+            latitude = location.get("lat") if location else restaurant.get("latitude")
+            longitude = location.get("lng") if location else restaurant.get("longitude")
+
+            # Convert imageUrls to array format
+            image_urls = restaurant.get("imageUrls", [])
+            if not isinstance(image_urls, list):
+                image_urls = []
+
+            # Prepare opening hours as JSONB
+            opening_hours = restaurant.get("openingHours", [])
+            if not isinstance(opening_hours, list):
+                opening_hours = []
+
+            # Map to database schema
+            mapped_restaurant = {
+                "place_id": restaurant.get("placeId", ""),
+                "name": restaurant.get("name", restaurant.get("title", "")),
+                "address": restaurant.get("address", ""),
+                "phone": restaurant.get("phone", ""),
+                "website": restaurant.get("website", ""),
+                "latitude": float(latitude) if latitude else None,
+                "longitude": float(longitude) if longitude else None,
+                "rating": (
+                    float(restaurant.get("rating"))
+                    if restaurant.get("rating")
+                    else None
+                ),
+                "reviews_count": int(restaurant.get("reviewsCount", 0)),
+                "category": restaurant.get(
+                    "category", restaurant.get("categoryName", "")
+                ),
+                "price_level": restaurant.get("priceLevel", ""),
+                "opening_hours": opening_hours,
+                "image_urls": image_urls,
+                "images": restaurant.get("images", {}),
+                "status": "pending",  # Default status for new restaurants
+                "google_maps_url": restaurant.get("url", ""),
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+            }
+
+            # Remove None/empty values to let database handle defaults
+            clean_restaurant = {
+                k: v
+                for k, v in mapped_restaurant.items()
+                if v is not None
+                and v != ""
+                and k != "place_id"  # Always keep place_id even if empty
+            }
+            # Always include place_id for the upsert
+            clean_restaurant["place_id"] = mapped_restaurant["place_id"]
+
+            restaurants_to_upsert.append(clean_restaurant)
+
+        if restaurants_to_upsert:
+            # Use upsert to handle duplicates
+            response = (
+                supabase.table("restaurants")
+                .upsert(restaurants_to_upsert, on_conflict="place_id")
+                .execute()
+            )
+
+            success_count = len(response.data) if response.data else 0
+            return success_count, None
+        else:
+            return 0, "No valid restaurants to save"
+
+    except Exception as e:
+        return 0, f"Error saving restaurants: {str(e)}"
