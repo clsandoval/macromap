@@ -212,6 +212,7 @@ def process_restaurants_async(place_ids: List[str], max_concurrent: int = 5) -> 
 def trigger_restaurant_processing(restaurants_data: List[Dict]) -> Dict[str, any]:
     """
     Extract place IDs from restaurant data and trigger background processing
+    Only processes restaurants whose status is not 'complete' or 'pending'
 
     Args:
         restaurants_data: List of restaurant dictionaries from Apify
@@ -221,6 +222,7 @@ def trigger_restaurant_processing(restaurants_data: List[Dict]) -> Dict[str, any
     """
     place_ids = []
 
+    # Extract place IDs from restaurant data
     for restaurant in restaurants_data:
         place_id = restaurant.get("placeId")
         if place_id:
@@ -231,14 +233,86 @@ def trigger_restaurant_processing(restaurants_data: List[Dict]) -> Dict[str, any
         return {
             "triggered": False,
             "restaurants_count": 0,
+            "restaurants_to_process": 0,
+            "skipped_count": 0,
             "message": "No valid restaurants found for processing",
         }
 
-    # Trigger background processing
-    process_restaurants_async(place_ids)
+    # Check status of all restaurants in database
+    try:
+        response = (
+            supabase.table("restaurants")
+            .select("place_id, status")
+            .in_("place_id", place_ids)
+            .execute()
+        )
 
-    return {
-        "triggered": True,
-        "restaurants_count": len(place_ids),
-        "message": f"Menu processing started for {len(place_ids)} restaurants",
-    }
+        # Create status map for existing restaurants
+        status_map = {}
+        if response.data:
+            status_map = {row["place_id"]: row["status"] for row in response.data}
+
+        # Filter out restaurants that are already complete or pending
+        place_ids_to_process = []
+        skipped_restaurants = []
+
+        for place_id in place_ids:
+            current_status = status_map.get(
+                place_id, "new"
+            )  # Default to "new" if not in DB
+
+            if current_status in ["complete", "pending"]:
+                skipped_restaurants.append(place_id)
+                logger.info(
+                    f"Skipping restaurant {place_id} - status: {current_status}"
+                )
+            else:
+                place_ids_to_process.append(place_id)
+                logger.info(
+                    f"Will process restaurant {place_id} - status: {current_status}"
+                )
+
+        if not place_ids_to_process:
+            logger.info("No restaurants need processing - all are complete or pending")
+            return {
+                "triggered": False,
+                "restaurants_count": len(place_ids),
+                "restaurants_to_process": 0,
+                "skipped_count": len(skipped_restaurants),
+                "message": f"All {len(place_ids)} restaurants are already complete or pending processing",
+                "skipped_statuses": {
+                    pid: status_map.get(pid, "new") for pid in skipped_restaurants
+                },
+            }
+
+        # Trigger background processing only for restaurants that need it
+        process_restaurants_async(place_ids_to_process)
+
+        logger.info(
+            f"Triggered processing for {len(place_ids_to_process)} restaurants, skipped {len(skipped_restaurants)}"
+        )
+
+        return {
+            "triggered": True,
+            "restaurants_count": len(place_ids),
+            "restaurants_to_process": len(place_ids_to_process),
+            "skipped_count": len(skipped_restaurants),
+            "message": f"Menu processing started for {len(place_ids_to_process)} restaurants (skipped {len(skipped_restaurants)} already complete/pending)",
+            "skipped_statuses": {
+                pid: status_map.get(pid, "new") for pid in skipped_restaurants
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Error checking restaurant statuses: {str(e)}")
+        # Fallback to processing all restaurants if status check fails
+        process_restaurants_async(place_ids)
+
+        return {
+            "triggered": True,
+            "restaurants_count": len(place_ids),
+            "restaurants_to_process": len(place_ids),
+            "skipped_count": 0,
+            "message": f"Menu processing started for {len(place_ids)} restaurants (status check failed, processing all)",
+            "error": f"Status check failed: {str(e)}",
+        }
