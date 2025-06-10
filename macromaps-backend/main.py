@@ -156,11 +156,21 @@ def scan_nearby():
 
                 enhanced_restaurants.append(enhanced_restaurant)
 
-        # Start background Apify processing (don't wait for it)
-        background_thread = threading.Thread(
-            target=background_apify_processing, args=(latitude, longitude), daemon=True
-        )
-        background_thread.start()
+        # Start background Apify processing (don't wait for it) - only if we have fewer than 10 restaurants
+        if len(enhanced_restaurants) <= 10:
+            background_thread = threading.Thread(
+                target=background_apify_processing,
+                args=(latitude, longitude),
+                daemon=True,
+            )
+            background_thread.start()
+            background_processing_status = "started"
+            background_processing_message = (
+                "Background Apify extraction and processing started"
+            )
+        else:
+            background_processing_status = "skipped"
+            background_processing_message = f"Background processing skipped - {len(enhanced_restaurants)} restaurants already cached"
 
         # Create response summary
         restaurants_with_menu = len(
@@ -188,8 +198,8 @@ def scan_nearby():
                     "restaurants_with_menu": restaurants_with_menu,
                 },
                 "background_processing": {
-                    "status": "started",
-                    "message": "Background Apify extraction and processing started",
+                    "status": background_processing_status,
+                    "message": background_processing_message,
                 },
                 "data_source": "cached" if enhanced_restaurants else "none",
             }

@@ -1080,3 +1080,377 @@ MENU_PROCESSING_CONFIG = {
 - **Processing Speed**: Up to 10x faster with parallel processing
 - **Menu Detection**: Prioritizes high-probability menu images first
 - **Accuracy**: Maintains high accuracy with optimized models
+
+## 📋 API Schema & Frontend Integration
+
+### Endpoints Overview
+
+The MacroMaps backend provides two main endpoints for frontend integration:
+
+#### 1. Health Check Endpoint
+- **Endpoint**: `GET /health`
+- **Purpose**: Server health verification
+- **Authentication**: None required
+
+#### 2. Restaurant Discovery Endpoint
+- **Endpoint**: `POST /scan-nearby`
+- **Purpose**: Find restaurants near a location with complete menu analysis
+- **Authentication**: None required
+
+---
+
+### 🔍 POST /scan-nearby
+
+**Description**: Discovers restaurants within a specified radius and returns comprehensive data including AI-analyzed menu items with nutritional information.
+
+#### Request Format
+
+```json
+{
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "radius": 1.0,
+  "mock": false
+}
+```
+
+#### Request Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `latitude` | `number` | ✅ | - | GPS latitude coordinate |
+| `longitude` | `number` | ✅ | - | GPS longitude coordinate |  
+| `radius` | `number` | ❌ | `1.0` | Search radius in kilometers (note: currently fixed at 5km for caching) |
+| `mock` | `boolean` | ❌ | `false` | Enable mock mode for testing |
+
+#### Response Format
+
+```json
+{
+  "success": true,
+  "message": "Found 12 cached restaurants within 5.0km",
+  "restaurants": [
+    {
+      "name": "Bella Italia",
+      "address": "123 Main St, San Francisco, CA",
+      "rating": 4.3,
+      "reviewsCount": 284,
+      "category": "Italian restaurant",
+      "phone": "+1-555-0123",
+      "website": "https://bella-italia.com",
+      "priceLevel": "$$",
+      "openingHours": [
+        "Monday: 11:00 AM – 10:00 PM",
+        "Tuesday: 11:00 AM – 10:00 PM",
+        "Wednesday: 11:00 AM – 10:00 PM",
+        "Thursday: 11:00 AM – 10:00 PM",
+        "Friday: 11:00 AM – 11:00 PM",
+        "Saturday: 11:00 AM – 11:00 PM",
+        "Sunday: 12:00 PM – 9:00 PM"
+      ],
+      "location": {
+        "lat": 37.7749,
+        "lng": -122.4194
+      },
+      "placeId": "ChIJd8BlQ2BZwokRAFUEcm_qrcA",
+      "url": "https://maps.google.com/?cid=123456789",
+      "distance_km": 0.8,
+      "imageUrls": [
+        "https://lh5.googleusercontent.com/p/restaurant-1.jpg",
+        "https://lh5.googleusercontent.com/p/restaurant-2.jpg"
+      ],
+      "images": {
+        "exterior": ["https://lh5.googleusercontent.com/p/ext-1.jpg"],
+        "interior": ["https://lh5.googleusercontent.com/p/int-1.jpg"],
+        "menu": ["https://lh5.googleusercontent.com/p/menu-1.jpg"]
+      },
+      "processing_status": "finished",
+      "has_menu_items": true,
+      "menuItems": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "restaurant_id": "550e8400-e29b-41d4-a716-446655440001",
+          "name": "Margherita Pizza",
+          "description": "Classic pizza with fresh tomatoes, mozzarella, and basil",
+          "price": 16.99,
+          "currency": "USD",
+          "calories": 285,
+          "serving_size": 350.0,
+          "protein": 12.5,
+          "carbs": 36.2,
+          "fat": 10.8,
+          "fiber": 2.3,
+          "sugar": 4.1,
+          "sodium": 640.0,
+          "dietary_tags": ["vegetarian"],
+          "allergens": ["gluten", "dairy"],
+          "spice_level": null,
+          "category": "Pizza",
+          "subcategory": "Classic",
+          "menu_section": "Main Courses",
+          "extracted_from_image_url": "https://lh5.googleusercontent.com/p/menu-1.jpg",
+          "confidence_score": 0.92,
+          "llm_processed": true,
+          "is_available": true,
+          "seasonal": false,
+          "created_at": "2024-01-15T10:30:00Z",
+          "updated_at": "2024-01-15T10:30:00Z"
+        }
+      ]
+    }
+  ],
+  "searchLocation": {
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "radius_km": 5.0
+  },
+  "processing_summary": {
+    "total_restaurants": 12,
+    "completed": 12,
+    "pending": 0,
+    "processing": 0,
+    "new": 0,
+    "restaurants_with_menu": 8
+  },
+  "background_processing": {
+    "status": "skipped",
+    "message": "Background processing skipped - 12 restaurants already cached"
+  },
+  "data_source": "cached"
+}
+```
+
+---
+
+### 🏥 GET /health
+
+#### Response Format
+
+```json
+{
+  "status": "healthy",
+  "message": "MacroMap backend is running"
+}
+```
+
+---
+
+### 📊 Data Structure Schemas
+
+#### Restaurant Object Schema
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `name` | `string` | Restaurant name | `"Bella Italia"` |
+| `address` | `string` | Full street address | `"123 Main St, San Francisco, CA"` |
+| `rating` | `number` \| `null` | Google rating (1-5 scale) | `4.3` |
+| `reviewsCount` | `number` | Number of Google reviews | `284` |
+| `category` | `string` | Restaurant category/cuisine | `"Italian restaurant"` |
+| `phone` | `string` | Phone number | `"+1-555-0123"` |
+| `website` | `string` | Restaurant website URL | `"https://bella-italia.com"` |
+| `priceLevel` | `string` | Price range indicator | `"$$"` ($ to $$$$) |
+| `openingHours` | `string[]` | Weekly opening hours | `["Monday: 11:00 AM – 10:00 PM", ...]` |
+| `location` | `Location` | GPS coordinates | `{"lat": 37.7749, "lng": -122.4194}` |
+| `placeId` | `string` | Google Places ID | `"ChIJd8BlQ2BZwokRAFUEcm_qrcA"` |
+| `url` | `string` | Google Maps URL | `"https://maps.google.com/?cid=123456789"` |
+| `distance_km` | `number` | Distance from search center (km) | `0.8` |
+| `imageUrls` | `string[]` | All restaurant image URLs | `["https://...", ...]` |
+| `images` | `Images` | Categorized image URLs | `{"exterior": [...], "interior": [...], "menu": [...]}` |
+| `processing_status` | `string` | Menu processing status | `"finished"` \| `"processing"` \| `"pending"` |
+| `has_menu_items` | `boolean` | Whether menu items are available | `true` |
+| `menuItems` | `MenuItem[]` | Array of menu items with nutrition | `[...]` |
+
+#### MenuItem Object Schema
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `id` | `string` | Unique menu item ID (UUID) | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `restaurant_id` | `string` | Restaurant ID (UUID) | `"550e8400-e29b-41d4-a716-446655440001"` |
+| `name` | `string` | Item name | `"Margherita Pizza"` |
+| `description` | `string` \| `null` | Item description | `"Classic pizza with fresh tomatoes..."` |
+| `price` | `number` \| `null` | Price in local currency | `16.99` |
+| `currency` | `string` \| `null` | Currency code | `"USD"` |
+| `calories` | `number` \| `null` | Estimated calories | `285` |
+| `serving_size` | `number` \| `null` | Serving size in grams | `350.0` |
+| `protein` | `number` \| `null` | Protein content (grams) | `12.5` |
+| `carbs` | `number` \| `null` | Carbohydrate content (grams) | `36.2` |
+| `fat` | `number` \| `null` | Fat content (grams) | `10.8` |
+| `fiber` | `number` \| `null` | Fiber content (grams) | `2.3` |
+| `sugar` | `number` \| `null` | Sugar content (grams) | `4.1` |
+| `sodium` | `number` \| `null` | Sodium content (milligrams) | `640.0` |
+| `dietary_tags` | `string[]` | Dietary classifications | `["vegetarian", "gluten-free"]` |
+| `allergens` | `string[]` | Known allergens | `["gluten", "dairy", "nuts"]` |
+| `spice_level` | `string` \| `null` | Spice level | `"mild"` \| `"medium"` \| `"hot"` |
+| `category` | `string` | Menu category | `"Pizza"` |
+| `subcategory` | `string` \| `null` | Menu subcategory | `"Classic"` |
+| `menu_section` | `string` \| `null` | Menu section | `"Main Courses"` |
+| `extracted_from_image_url` | `string` | Source image URL | `"https://lh5.googleusercontent.com/p/menu-1.jpg"` |
+| `confidence_score` | `number` | AI confidence (0.0-1.0) | `0.92` |
+| `llm_processed` | `boolean` | Whether processed by AI | `true` |
+| `is_available` | `boolean` | Item availability | `true` |
+| `seasonal` | `boolean` | Seasonal availability | `false` |
+| `created_at` | `string` | Creation timestamp (ISO 8601) | `"2024-01-15T10:30:00Z"` |
+| `updated_at` | `string` | Last update timestamp (ISO 8601) | `"2024-01-15T10:30:00Z"` |
+
+#### Supporting Type Schemas
+
+```typescript
+// Location coordinate object
+interface Location {
+  lat: number;
+  lng: number;
+}
+
+// Categorized restaurant images
+interface Images {
+  exterior: string[];
+  interior: string[];
+  menu: string[];
+}
+
+// Processing status enumeration
+type ProcessingStatus = "pending" | "processing" | "finished" | "error";
+
+// Price level enumeration
+type PriceLevel = "$" | "$$" | "$$$" | "$$$$";
+
+// Spice level enumeration
+type SpiceLevel = "mild" | "medium" | "hot";
+```
+
+---
+
+### 🔄 Processing States
+
+The API uses a sophisticated background processing system:
+
+1. **Immediate Response**: Returns cached restaurants instantly
+2. **Background Processing**: Fetches new restaurants and analyzes menus
+3. **Status Updates**: Restaurants progress through processing states
+
+#### Processing Status Values
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Restaurant saved, menu processing not started |
+| `processing` | Currently analyzing menu images with AI |
+| `finished` | Menu analysis complete, items available |
+| `error` | Processing failed, manual review needed |
+
+---
+
+### 🎭 Mock Mode
+
+For development and testing, use `"mock": true` in the request:
+
+```json
+{
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "mock": true
+}
+```
+
+Mock mode generates realistic restaurant data with:
+- Varied cuisines and categories
+- Realistic nutritional data
+- Sample menu items with proper macronutrient profiles
+- Diverse restaurant ratings and reviews
+
+---
+
+### ⚠️ Error Responses
+
+#### 400 Bad Request
+```json
+{
+  "error": "Missing latitude or longitude in request"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "error": "Internal server error",
+  "details": "Specific error message"
+}
+```
+
+---
+
+### 📈 Usage Examples
+
+#### Frontend TypeScript Integration
+
+```typescript
+interface ScanNearbyRequest {
+  latitude: number;
+  longitude: number;
+  radius?: number;
+  mock?: boolean;
+}
+
+interface ScanNearbyResponse {
+  success: boolean;
+  message: string;
+  restaurants: Restaurant[];
+  searchLocation: {
+    latitude: number;
+    longitude: number;
+    radius_km: number;
+  };
+  processing_summary: {
+    total_restaurants: number;
+    completed: number;
+    pending: number;
+    processing: number;
+    new: number;
+    restaurants_with_menu: number;
+  };
+  background_processing: {
+    status: string;
+    message: string;
+  };
+  data_source: string;
+}
+
+// Usage example
+const searchRestaurants = async (lat: number, lng: number): Promise<ScanNearbyResponse> => {
+  const response = await fetch('http://localhost:5000/scan-nearby', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      latitude: lat,
+      longitude: lng,
+      radius: 2.0
+    })
+  });
+  
+  return response.json();
+};
+```
+
+#### React Hook Example
+
+```typescript
+const useRestaurantSearch = () => {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  const searchNearby = async (lat: number, lng: number) => {
+    setLoading(true);
+    try {
+      const data = await searchRestaurants(lat, lng);
+      setRestaurants(data.restaurants);
+    } catch (error) {
+      console.error('Failed to fetch restaurants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return { restaurants, loading, searchNearby };
+};
+```
