@@ -21,11 +21,11 @@ RUN pip install uv
 # Copy dependency files first (for better Docker layer caching)
 COPY pyproject.toml uv.lock ./
 
-# Install Python dependencies
-RUN uv pip install --system -r uv.lock
+# Install Python dependencies using uv sync
+RUN uv sync --frozen --no-dev
 
 # Install gunicorn for production server
-RUN uv pip install --system gunicorn
+RUN uv pip install gunicorn
 
 # Copy application code
 COPY . .
@@ -43,7 +43,7 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
 # Run gunicorn with optimized settings
-CMD ["gunicorn", \
+CMD ["uv", "run", "gunicorn", \
      "--bind", "0.0.0.0:5000", \
      "--workers", "4", \
      "--worker-class", "sync", \
