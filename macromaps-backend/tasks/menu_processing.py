@@ -150,9 +150,9 @@ class MenuProcessor:
 
     def __init__(
         self,
-        max_workers: int = 10,
-        classification_workers: int = 5,
-        analysis_workers: int = 3,
+        max_workers: int = 5,
+        classification_workers: int = 3,
+        analysis_workers: int = 2,
     ):
         self.max_workers = max_workers
         self.classification_workers = classification_workers
@@ -989,7 +989,7 @@ class MenuProcessor:
 
 
 def run_menu_processing_pipeline(
-    restaurant_ids: Optional[List[str]] = None, max_workers: int = 10
+    restaurant_ids: Optional[List[str]] = None, max_workers: int = 5
 ):
     """
     Convenience function to run the full menu processing pipeline

@@ -27,10 +27,10 @@ class RestaurantTaskResult:
 class RestaurantProcessor:
     """Handles restaurant processing tasks including menu extraction"""
 
-    def __init__(self, max_concurrent_restaurants: int = 5):
+    def __init__(self, max_concurrent_restaurants: int = 3):
         self.max_concurrent_restaurants = max_concurrent_restaurants
         self.menu_processor = MenuProcessor(
-            max_workers=10, classification_workers=5, analysis_workers=3
+            max_workers=5, classification_workers=3, analysis_workers=2
         )
 
     def process_restaurant_menus(self, place_id: str) -> RestaurantTaskResult:
@@ -193,7 +193,7 @@ class RestaurantProcessor:
         return results
 
 
-def process_restaurants_async(place_ids: List[str], max_concurrent: int = 5) -> None:
+def process_restaurants_async(place_ids: List[str], max_concurrent: int = 3) -> None:
     """
     Asynchronously process restaurants in a background thread
 
