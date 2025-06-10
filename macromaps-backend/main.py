@@ -100,7 +100,7 @@ def scan_nearby():
             restaurant_ids = [r["id"] for r in cached_restaurants]
 
             # Get menu items for these restaurants
-            menu_items, menu_error = get_menu_items_for_restaurants(restaurant_ids)
+            menu_items, menu_error = restaurant_ids
 
             if menu_error:
                 print(f"Warning: Failed to fetch menu items: {menu_error}")
@@ -157,7 +157,7 @@ def scan_nearby():
                 enhanced_restaurants.append(enhanced_restaurant)
 
         # Start background Apify processing (don't wait for it) - only if we have fewer than 10 restaurants
-        if len(enhanced_restaurants) <= 10:
+        if len(enhanced_restaurants) <= 50:
             background_thread = threading.Thread(
                 target=background_apify_processing,
                 args=(latitude, longitude),
