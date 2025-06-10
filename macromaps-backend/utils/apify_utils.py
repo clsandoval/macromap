@@ -34,7 +34,7 @@ def extract_restaurants_via_apify(latitude, longitude):
         run_input = {
             "searchStringsArray": ["restaurants"],
             "customGeolocation": custom_geolocation,
-            "maxCrawledPlacesPerSearch": 20,
+            "maxCrawledPlacesPerSearch": 10,
             "language": "en",
             "skipClosedPlaces": False,
             "exportPlaceUrls": False,
