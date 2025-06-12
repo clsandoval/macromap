@@ -1,4 +1,5 @@
 export interface ApiRestaurant {
+  id: string
   name: string
   address: string
   rating: number
@@ -22,13 +23,19 @@ export interface ApiRestaurant {
     menu: string[]
   }
   processing_status: string
-  has_menu_items: boolean
-  menuItems: ApiMenuItem[]
+  created_at: string
+  updated_at: string
+  // Optional fields for scan-nearby response
+  has_menu_items?: boolean
+  menuItems?: ApiMenuItem[]
 }
 
 export interface ApiMenuItem {
   id: string
   restaurant_id: string
+  restaurant_name?: string
+  restaurant_distance_km?: number
+  restaurant_place_id?: string
   name: string
   description: string
   price: number
@@ -47,13 +54,21 @@ export interface ApiMenuItem {
   category: string
   subcategory: string
   menu_section: string
-  extracted_from_image_url: string
   confidence_score: number
-  llm_processed: boolean
   is_available: boolean
   seasonal: boolean
   created_at: string
   updated_at: string
+  // Optional fields for ratio sorting
+  calculated_ratio?: {
+    value: number
+    numerator: string
+    denominator: string
+    display: string
+  }
+  // Legacy fields for backward compatibility with scan-nearby
+  extracted_from_image_url?: string
+  llm_processed?: boolean
 }
 
 export interface ScanNearbyRequest {

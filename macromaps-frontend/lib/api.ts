@@ -14,6 +14,92 @@ export class ApiError extends Error {
   }
 }
 
+// New types for paginated API responses
+export interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  total_pages: number
+  has_next: boolean
+  has_prev: boolean
+}
+
+export interface RestaurantsResponse {
+  success: boolean
+  data: ApiRestaurant[]
+  pagination: PaginationInfo
+  search_params: {
+    latitude: number
+    longitude: number
+    radius_km: number
+    sort_by: string
+  }
+}
+
+export interface MenuItemsResponse {
+  success: boolean
+  data: ApiMenuItem[]
+  pagination: PaginationInfo
+  search_params: {
+    latitude: number
+    longitude: number
+    radius_km: number
+    sort_by: string
+    sort_order: string
+    restaurant_id?: string
+  }
+}
+
+export interface RestaurantMenuResponse {
+  success: boolean
+  restaurant: {
+    id: string
+    name: string
+    place_id: string
+    distance_km: number
+  }
+  data: ApiMenuItem[]
+  pagination: PaginationInfo
+  search_params: {
+    latitude: number
+    longitude: number
+    sort_by: string
+    sort_order: string
+    restaurant_id: string
+  }
+}
+
+// Parameters for API calls
+export interface GetRestaurantsParams {
+  latitude: number
+  longitude: number
+  page?: number
+  limit?: number
+  radius?: number
+  sort_by?: "distance" | "rating" | "reviews_count" | "name"
+}
+
+export interface GetMenuItemsParams {
+  latitude: number
+  longitude: number
+  page?: number
+  limit?: number
+  radius?: number
+  sort_by?: string // Can be field name or ratio like "protein/fat"
+  sort_order?: "asc" | "desc"
+  restaurant_id?: string
+}
+
+export interface GetRestaurantMenuParams {
+  restaurant_id: string
+  latitude: number
+  longitude: number
+  page?: number
+  limit?: number
+  sort_by?: string // Can be field name or ratio like "protein/fat"
+  sort_order?: "asc" | "desc"
+}
+
 // Mock data generators that match the API response structure
 function generateMockApiRestaurants(latitude: number, longitude: number, count = 12): ApiRestaurant[] {
   const restaurants: ApiRestaurant[] = []
@@ -169,10 +255,58 @@ function generateMockMenuItems(restaurantIndex: number, count: number): ApiMenuI
   return menuItems
 }
 
-// Update the scanNearby function to use the correct endpoint path
+// Helper function for making API requests
+async function makeApiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  try {
+    console.log("Making API request to:", endpoint)
+
+    const response = await fetch(endpoint, {
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+      ...options,
+    })
+
+    console.log("API response status:", response.status)
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      console.error("API error response:", errorData)
+      throw new ApiError(
+        errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        response.status,
+        errorData.code,
+      )
+    }
+
+    const data = await response.json()
+    console.log("API response data:", data)
+
+    if (!data.success) {
+      throw new ApiError(data.error || "API request failed")
+    }
+
+    return data
+  } catch (error) {
+    console.error("API request failed:", error)
+
+    if (error instanceof ApiError) {
+      throw error
+    }
+
+    // Network or other errors
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new ApiError("Network error: Unable to connect to the API. Please check your internet connection.")
+    }
+
+    throw new ApiError(error instanceof Error ? error.message : "Network error occurred")
+  }
+}
+
+// Original scan function for initial discovery
 export async function scanNearby(request: ScanNearbyRequest): Promise<ScanNearbyResponse> {
   try {
-    // Use /scan-nearby directly without /api prefix
     const endpoint = `${API_BASE_URL}/scan-nearby`
     console.log("Making API request to:", endpoint)
     console.log("Request payload:", request)
@@ -219,4 +353,67 @@ export async function scanNearby(request: ScanNearbyRequest): Promise<ScanNearby
 
     throw new ApiError(error instanceof Error ? error.message : "Network error occurred")
   }
+}
+
+// New paginated API functions for views/browsing
+
+/**
+ * Get paginated list of restaurants within radius
+ */
+export async function getRestaurants(params: GetRestaurantsParams): Promise<RestaurantsResponse> {
+  const searchParams = new URLSearchParams({
+    latitude: params.latitude.toString(),
+    longitude: params.longitude.toString(),
+    ...(params.page && { page: params.page.toString() }),
+    ...(params.limit && { limit: params.limit.toString() }),
+    ...(params.radius && { radius: params.radius.toString() }),
+    ...(params.sort_by && { sort_by: params.sort_by }),
+  })
+
+  const endpoint = `${API_BASE_URL}/restaurants?${searchParams}`
+  return makeApiRequest<RestaurantsResponse>(endpoint)
+}
+
+/**
+ * Get paginated list of menu items within radius
+ */
+export async function getMenuItems(params: GetMenuItemsParams): Promise<MenuItemsResponse> {
+  const searchParams = new URLSearchParams({
+    latitude: params.latitude.toString(),
+    longitude: params.longitude.toString(),
+    ...(params.page && { page: params.page.toString() }),
+    ...(params.limit && { limit: params.limit.toString() }),
+    ...(params.radius && { radius: params.radius.toString() }),
+    ...(params.sort_by && { sort_by: params.sort_by }),
+    ...(params.sort_order && { sort_order: params.sort_order }),
+    ...(params.restaurant_id && { restaurant_id: params.restaurant_id }),
+  })
+
+  const endpoint = `${API_BASE_URL}/menu-items?${searchParams}`
+  return makeApiRequest<MenuItemsResponse>(endpoint)
+}
+
+/**
+ * Get menu items for a specific restaurant
+ */
+export async function getRestaurantMenu(params: GetRestaurantMenuParams): Promise<RestaurantMenuResponse> {
+  const searchParams = new URLSearchParams({
+    latitude: params.latitude.toString(),
+    longitude: params.longitude.toString(),
+    ...(params.page && { page: params.page.toString() }),
+    ...(params.limit && { limit: params.limit.toString() }),
+    ...(params.sort_by && { sort_by: params.sort_by }),
+    ...(params.sort_order && { sort_order: params.sort_order }),
+  })
+
+  const endpoint = `${API_BASE_URL}/restaurants/${params.restaurant_id}/menu?${searchParams}`
+  return makeApiRequest<RestaurantMenuResponse>(endpoint)
+}
+
+/**
+ * Get a single restaurant by ID
+ */
+export async function getRestaurant(restaurantId: string): Promise<{ success: boolean; data: ApiRestaurant }> {
+  const endpoint = `${API_BASE_URL}/restaurants/${restaurantId}`
+  return makeApiRequest<{ success: boolean; data: ApiRestaurant }>(endpoint)
 }
