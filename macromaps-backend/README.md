@@ -1,1395 +1,90 @@
-# MacroMaps Backend Server 🗺️
+# MacroMaps Backend API 🗺️
 
-A Flask-based backend server for the MacroMaps application that provides restaurant discovery and comprehensive menu analysis capabilities with AI-powered nutritional information extraction.
-
-## 🚀 Features
-
-### Core Functionality
-- **Restaurant Discovery**: Find nearby restaurants using GPS coordinates
-- **Real-time Data**: Integration with Apify API for Google Places data extraction
-- **Mock Mode**: Development-friendly mock data generation for testing
-- **AI-Powered Menu Analysis**: Complete pipeline for menu image processing and nutritional extraction
-- **Smart Image Processing**: Prioritized processing of menu-likely images (URLs with `/p/` prioritized over `/gps-cs-s/`)
-- **Database Integration**: Supabase integration for persistent data storage
-- **CORS Support**: Cross-origin resource sharing enabled for frontend integration
-- **Parallel Processing**: Multi-threaded menu processing for optimal performance
-
-### Advanced Menu Processing
-- **Image Classification**: AI-powered identification of menu images vs. other restaurant photos
-- **Menu Item Extraction**: Detailed extraction of menu items with prices and descriptions
-- **Nutritional Analysis**: AI-estimated macronutrient breakdown (calories, protein, carbs, fat)
-- **Menu Consolidation**: Intelligent merging of menu items from multiple images
-- **Cost-Optimized Processing**: Uses `gpt-4.1-nano` for classification and `gpt-4.1` for detailed analysis
-
-### API Capabilities
-- Location-based restaurant search within customizable radius
-- Restaurant data including ratings, reviews, contact information
-- Complete menu items with detailed nutritional breakdown
-- Restaurant images and photo metadata with smart prioritization
-- Opening hours and contact information
-- Price level indicators
-- Processing status tracking for restaurants
+A Flask-based backend server providing restaurant discovery and comprehensive menu analysis with AI-powered nutritional information extraction. This documentation is designed for frontend developers to understand exactly how to integrate with the API.
 
 ## 🏗️ System Architecture
 
 ```mermaid
 graph TB
-    %% Frontend/Client Layer
-    Client[🌐 Frontend Client<br/>React/Mobile App]
+    subgraph "Frontend Layer"
+        FE[Frontend Application<br/>React/Mobile App]
+    end
     
-    %% Main Flask Application
-    Flask[🐍 Flask Server<br/>main.py<br/>Port: 5000]
-    
-    %% API Endpoints
-    Health[🏥 /health<br/>Health Check]
-    ScanNearby[📍 /scan-nearby<br/>Restaurant Discovery<br/>+ Auto Menu Processing]
-    
-    %% Decision Logic
-    MockCheck{Mock Mode?<br/>mock: true/false}
-    
-    %% Core Utilities
-    MockUtils[🎭 Mock Utils<br/>mock_utils.py<br/>Generate Fake Data]
-    ApifyUtils[🔍 Apify Utils<br/>apify_utils.py<br/>Real Restaurant Data]
-    SupabaseUtils[🗄️ Supabase Utils<br/>supabase_utils.py<br/>Database Operations]
-    
-    %% Processing Pipeline
-    RestaurantProcessor[🏭 Restaurant Processor<br/>restaurant_processing.py<br/>Background Threading]
-    MenuProcessor[🤖 Menu Processor<br/>menu_processing.py<br/>AI-Powered Analysis]
-    LLMUtils[🧠 LLM Utils<br/>llm_utils.py<br/>Menu Analysis]
-    
-    %% External Services
-    ApifyAPI[🌍 Apify API<br/>Google Places Crawler<br/>compass/crawler-google-places]
-    SupabaseDB[(🗃️ Supabase Database<br/>PostgreSQL<br/>• restaurants table<br/>• menu_items table)]
-    OpenAI[🧠 OpenAI API<br/>GPT Models<br/>Menu Analysis]
-    
-    %% Data Processing
-    DataFormat[📋 Data Formatting<br/>• Standardize Structure<br/>• Add Nutritional Info<br/>• Generate Menu Items]
-    
-    %% Response Assembly
-    Response[📦 JSON Response<br/>• Restaurant List<br/>• Menu Items<br/>• Nutritional Data<br/>• Processing Status]
-    
-    %% Flow Connections
-    Client -->|HTTP Request POST /scan-nearby| Flask
-    Client -->|HTTP Request GET /health| Flask
-    
-    Flask --> Health
-    Flask --> ScanNearby
-    
-    ScanNearby --> MockCheck
-    
-    %% Mock Mode Path
-    MockCheck -->|Yes| MockUtils
-    MockUtils --> DataFormat
-    
-    %% Real API Mode Path
-    MockCheck -->|No| ApifyUtils
-    ApifyUtils -->|API Call Location + Radius| ApifyAPI
-    ApifyAPI -->|Restaurant Data + Images| ApifyUtils
-    ApifyUtils --> DataFormat
-    ApifyUtils --> RestaurantProcessor
-    
-    %% Background Processing Pipeline
-    RestaurantProcessor -->|Spawn Thread per Restaurant| MenuProcessor
-    MenuProcessor -->|Image Classification & Analysis| LLMUtils
-    LLMUtils -->|AI Menu Analysis| OpenAI
-    MenuProcessor -->|Save Menu Items| SupabaseUtils
-    
-    %% Database Integration
-    SupabaseUtils <-->|Query/Store Data| SupabaseDB
-    DataFormat --> SupabaseUtils
-    
-    %% Response Flow
-    DataFormat --> Response
-    Health --> Response
-    Response -->|JSON Response| Client
-    
-    %% Styling
-    classDef client fill:#e1f5fe
-    classDef flask fill:#f3e5f5
-    classDef utils fill:#e8f5e8
-    classDef processing fill:#fff9c4
-    classDef external fill:#fff3e0
-    classDef database fill:#fce4ec
-    classDef decision fill:#f1f8e9
-    
-    class Client client
-    class Flask,Health,ScanNearby flask
-    class MockUtils,ApifyUtils,SupabaseUtils,LLMUtils utils
-    class RestaurantProcessor,MenuProcessor processing
-    class ApifyAPI,OpenAI external
-    class SupabaseDB database
-    class MockCheck decision
-```
-
-## 🔄 Data Flow Diagram
-
-```mermaid
-sequenceDiagram
-    participant C as 🌐 Client
-    participant F as 🐍 Flask Server
-    participant M as 🎭 Mock Utils
-    participant A as 🔍 Apify Utils
-    participant API as 🌍 Apify API
-    participant RP as 🏭 Restaurant Processor
-    participant MP as 🤖 Menu Processor
-    participant LLM as 🧠 LLM Utils
-    participant S as 🗄️ Supabase
-    participant DB as 🗃️ Database
-    
-    Note over C,DB: Restaurant Discovery + Auto Menu Processing Flow
-    
-    C->>F: POST /scan-nearby<br/>{lat, lng, mock}
-    
-    alt Mock Mode (mock: true)
-        F->>M: Generate mock restaurants
-        M->>M: Create realistic data<br/>within radius
-        M->>F: Return mock restaurants<br/>with menu items
-    else Real API Mode (mock: false)
-        F->>A: Extract restaurants<br/>(lat, lng)
-        A->>API: Call Google Places<br/>Crawler Actor
-        Note over API: Scrape Google Places<br/>• Restaurant details<br/>• Reviews & ratings<br/>• Opening hours<br/>• Image URLs<br/>• Basic data
-        API->>A: Return raw restaurant data
-        A->>A: Format & standardize<br/>restaurant data
-        A->>S: Store restaurants with<br/>status = 'pending'
-        S->>DB: Insert new restaurants
-        DB->>S: Confirmation
+    subgraph "API Layer - Flask Backend"
+        API[Flask Server<br/>localhost:5000]
         
-        %% Trigger background processing
-        A->>RP: trigger_restaurant_processing<br/>(restaurant_data)
-        Note over RP: Extract place_ids<br/>Start background thread
-        
-        par Background Menu Processing
-            loop For each restaurant
-                RP->>S: Update status to 'processing'
-                RP->>MP: process_restaurant_images<br/>(place_id)
-                
-                MP->>S: Get image URLs<br/>for restaurant
-                S->>MP: Return image_urls array
-                
-                MP->>MP: Sort images by priority<br/>/p/ > /gps-cs-s/ > others
-                
-                par Image Classification (Parallel)
-                    MP->>LLM: classify_menu_image<br/>(gpt-4.1-nano)
-                    LLM->>MP: is_menu: true/false
-                end
-                
-                MP->>MP: Filter menu images<br/>from classification results
-                
-                par Menu Analysis (Parallel)
-                    MP->>LLM: analyze_menu_image<br/>(gpt-4.1, 5000 tokens)
-                    LLM->>MP: menu_items with<br/>prices, descriptions, macros
-                end
-                
-                MP->>LLM: aggregate_menu_items<br/>(consolidate duplicates)
-                LLM->>MP: final_menu_items
-                
-                MP->>S: Save menu_items<br/>to database
-                S->>DB: Insert menu items
-                RP->>S: Update status to 'finished'
-            end
+        subgraph "Route Modules"
+            SCAN[/scan-nearby<br/>Restaurant Discovery]
+            REST[/restaurants<br/>Restaurant Endpoints]
+            MENU[/menu-items<br/>Menu Endpoints]
+            HEALTH[/health<br/>Health Check]
         end
-        
-        A->>F: Formatted restaurants<br/>+ processing status
     end
     
-    F->>F: Assemble final response<br/>• Restaurant data<br/>• Processing status<br/>• Search location
-    
-    F->>C: JSON Response<br/>{success, restaurants[],<br/>menu_processing: {...}}
-    
-    Note over C,DB: Background processing continues<br/>Menu items saved asynchronously
-    
-    Note over C,DB: Health Check Flow
-    C->>F: GET /health
-    F->>C: {status: "healthy"}
-```
-
-## 🧩 Component Architecture
-
-```mermaid
-graph LR
-    subgraph "🐍 Flask Application"
-        Main[main.py<br/>• Route definitions<br/>• CORS setup<br/>• Error handling]
+    subgraph "Data Layer"
+        DB[(Supabase Database<br/>PostgreSQL)]
+        APIFY[Apify API<br/>Google Places Data]
+        AI[OpenAI API<br/>Menu Analysis]
     end
     
-    subgraph "🛠️ Utility Layer"
-        direction TB
-        ApifyUtil[apify_utils.py<br/>• API integration<br/>• Data extraction<br/>• Response formatting]
-        MockUtil[mock_utils.py<br/>• Fake data generation<br/>• Realistic restaurants<br/>• Menu item creation]
-        SupaUtil[supabase_utils.py<br/>• Database operations<br/>• Distance calculations<br/>• Data persistence]
-        LLMUtil[llm_utils.py<br/>• AI menu analysis<br/>• Nutrition enhancement<br/>• Image classification]
-    end
-    
-    subgraph "🏭 Processing Pipeline"
-        direction TB
-        RestaurantProc[restaurant_processing.py<br/>• Background threading<br/>• Status management<br/>• Parallel processing]
-        MenuProc[menu_processing.py<br/>• Image classification<br/>• Menu extraction<br/>• AI consolidation]
-    end
-    
-    subgraph "🌐 External APIs"
-        direction TB
-        Apify[Apify API<br/>• Google Places data<br/>• Restaurant scraping<br/>• Image URL extraction]
-        Supabase[Supabase<br/>• PostgreSQL database<br/>• Real-time features<br/>• Restaurant & menu storage]
-        OpenAIAPI[OpenAI API<br/>• GPT models<br/>• Menu analysis<br/>• Nutrition insights]
-    end
-    
-    subgraph "🧪 Testing Layer"
-        direction TB
-        TestApify[test_apify.py<br/>• API integration tests<br/>• Response validation]
-        TestMenu[test_menu_processing.py<br/>• Menu pipeline tests<br/>• Cost tracking<br/>• Smart image selection]
-        TestModels[test_models.py<br/>• Data model tests<br/>• Nutrition calculations]
-    end
-    
-    Main --> ApifyUtil
-    Main --> MockUtil
-    Main --> RestaurantProc
-    
-    ApifyUtil --> Apify
-    ApifyUtil --> RestaurantProc
-    RestaurantProc --> MenuProc
-    MenuProc --> LLMUtil
-    MenuProc --> SupaUtil
-    LLMUtil --> OpenAIAPI
-    SupaUtil --> Supabase
-    
-    TestApify --> ApifyUtil
-    TestMenu --> MenuProc
-    TestMenu --> RestaurantProc
-    TestModels --> MockUtil
-    TestModels --> SupaUtil
+    FE -->|HTTP Requests| API
+    SCAN -->|Background Processing| APIFY
+    SCAN -->|Store Data| DB
+    MENU -->|AI Processing| AI
+    REST -->|Query Data| DB
+    MENU -->|Query Data| DB
 ```
 
-## 🎯 Ideal System Workflow
-
-### 📋 Complete Restaurant Processing Pipeline
-
-```mermaid
-flowchart TD
-    Start([🔍 User Scan Request<br/>POST /scan-nearby])
-    
-    CheckDB{🗄️ Check Supabase<br/>Restaurants in radius<br/>status = 'finished'}
-    
-    HasFinished{Found finished<br/>restaurants?}
-    
-    ReturnExisting[📤 Return existing<br/>finished restaurants]
-    
-    ApifyCall[🌍 Hit Apify API<br/>Extract new restaurant data<br/>in scan circle]
-    
-    ParallelProcess[⚡ Parallel Processing<br/>Push each restaurant<br/>to Supabase]
-    
-    UpdateStatus1[📝 Mark restaurants as<br/>status = 'processing']
-    
-    MenuPipeline[🤖 Start Menu Analysis Pipeline<br/>For each restaurant]
-    
-    GetImages[📸 Get image URLs<br/>from Supabase<br/>restaurant.image_urls]
-    
-    ClassifyMenus[🔍 Classify Images<br/>Which are menu images?]
-    
-    ExtractItems[📋 Extract Menu Items<br/>• Item name<br/>• Price only]
-    
-    MergeMenus[🧠 LLM Merge<br/>Combine all menu items<br/>into final menu]
-    
-    MacroAnalysis[🍎 LLM Macro Analysis<br/>Estimate nutritional info<br/>per menu item]
-    
-    SaveMenuItems[💾 Push Menu Items<br/>to Supabase<br/>with restaurant_id]
-    
-    MarkComplete[✅ Mark Restaurant<br/>status = 'finished']
-    
-    FinalResponse[📤 Return Complete<br/>Restaurant + Menu Data]
-    
-    Start --> CheckDB
-    CheckDB --> HasFinished
-    
-    HasFinished -->|Yes| ReturnExisting
-    HasFinished -->|No| ApifyCall
-    
-    ApifyCall --> ParallelProcess
-    ParallelProcess --> UpdateStatus1
-    UpdateStatus1 --> MenuPipeline
-    
-    MenuPipeline --> GetImages
-    GetImages --> ClassifyMenus
-    ClassifyMenus --> ExtractItems
-    ExtractItems --> MergeMenus
-    MergeMenus --> MacroAnalysis
-    MacroAnalysis --> SaveMenuItems
-    SaveMenuItems --> MarkComplete
-    MarkComplete --> FinalResponse
-    
-    ReturnExisting --> FinalResponse
-```
-
-### 🔄 Detailed Processing Steps
-
-1. **Initial Scan Request**
-   - User sends GPS coordinates + radius
-   - Backend receives scan request with location data
-
-2. **Database Check Phase**
-   - Query Supabase for restaurants within scan radius
-   - Filter for `status = 'finished'` restaurants
-   - Return immediately if sufficient data exists
-
-3. **Data Acquisition Phase**
-   - Hit Apify API with location + radius parameters
-   - Extract new restaurant data from Google Places
-   - Parallel processing: Push each restaurant to Supabase
-   - Include complete image URL arrays for each restaurant
-
-4. **Menu Analysis Pipeline** (Parallel Processing)
-   - **Image Classification**: Identify which images are menu photos
-   - **Menu Extraction**: Extract item names and prices from menu images
-   - **Menu Consolidation**: LLM merges all extracted items into final menu
-   - **Nutritional Analysis**: LLM estimates macros (calories, protein, carbs, fat)
-
-5. **Data Persistence Phase**
-   - Push enriched menu items to Supabase with restaurant associations
-   - Update restaurant status to `'finished'`
-   - Return complete restaurant + menu data to client
-
-## 🗃️ Database Schema
-
-### 🏪 Restaurants Table
-
-```sql
-CREATE TABLE restaurants (
-    -- Primary Identifiers
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    place_id VARCHAR(255) UNIQUE NOT NULL,
-    
-    -- Basic Information
-    name VARCHAR(500) NOT NULL,
-    address TEXT,
-    phone VARCHAR(50),
-    website TEXT,
-    
-    -- Location Data
-    latitude DECIMAL(10, 8) NOT NULL,
-    longitude DECIMAL(11, 8) NOT NULL,
-    
-    -- Rating & Reviews
-    rating DECIMAL(3, 2),
-    reviews_count INTEGER DEFAULT 0,
-    
-    -- Classification
-    category VARCHAR(200),
-    price_level VARCHAR(10), -- $, $$, $$$, $$$$
-    
-    -- Operating Hours (JSON array)
-    opening_hours JSONB,
-    
-    -- Image Data
-    image_urls TEXT[], -- Array of direct image URLs
-    images JSONB, -- Detailed image objects with metadata
-    
-    -- Processing Status
-    status VARCHAR(20) DEFAULT 'pending', -- pending, processing, finished, error
-    processing_started_at TIMESTAMP,
-    processing_completed_at TIMESTAMP,
-    
-    -- External References
-    google_maps_url TEXT,
-    apify_run_id VARCHAR(100),
-    
-    -- Timestamps
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    -- Indexes for performance
-    INDEX idx_restaurants_location (latitude, longitude),
-    INDEX idx_restaurants_status (status),
-    INDEX idx_restaurants_place_id (place_id)
-);
-```
-
-### 🍽️ Menu Items Table
-
-```sql
-CREATE TABLE menu_items (
-    -- Primary Identifiers
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
-    
-    -- Basic Item Information
-    name VARCHAR(300) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2),
-    currency VARCHAR(3),
-    
-    -- Nutritional Information (LLM Generated)
-    calories INTEGER,
-    protein DECIMAL(5, 2), -- grams
-    carbs DECIMAL(5, 2), -- grams  
-    fat DECIMAL(5, 2), -- grams
-    fiber DECIMAL(5, 2), -- grams
-    sugar DECIMAL(5, 2), -- grams
-    sodium DECIMAL(8, 2), -- milligrams
-    
-    -- Dietary Classifications
-    dietary_tags TEXT[], -- vegetarian, vegan, gluten-free, etc.
-    allergens TEXT[], -- nuts, dairy, gluten, etc.
-    spice_level VARCHAR(20), -- mild, medium, hot, etc.
-    
-    -- Menu Organization
-    category VARCHAR(100), -- appetizers, mains, desserts, etc.
-    subcategory VARCHAR(100),
-    menu_section VARCHAR(100),
-    
-    -- Processing Metadata
-    extracted_from_image_url TEXT, -- Which image this item was extracted from
-    confidence_score DECIMAL(3, 2), -- AI confidence in extraction (0.00-1.00)
-    llm_processed BOOLEAN DEFAULT FALSE,
-    
-    -- Availability
-    is_available BOOLEAN DEFAULT TRUE,
-    seasonal BOOLEAN DEFAULT FALSE,
-    
-    -- Timestamps
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    -- Indexes for performance
-    INDEX idx_menu_items_restaurant (restaurant_id),
-    INDEX idx_menu_items_category (category),
-    INDEX idx_menu_items_dietary (dietary_tags),
-    INDEX idx_menu_items_nutrition (calories, protein, carbs, fat)
-);
-```
-
-### 🔗 Supporting Tables
-
-#### Image Processing Log
-```sql
-CREATE TABLE image_processing_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    restaurant_id UUID NOT NULL REFERENCES restaurants(id),
-    image_url TEXT NOT NULL,
-    is_menu_image BOOLEAN,
-    classification_confidence DECIMAL(3, 2),
-    processing_status VARCHAR(20), -- pending, processing, completed, failed
-    extracted_items_count INTEGER DEFAULT 0,
-    processed_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-#### Processing Queue
-```sql
-CREATE TABLE processing_queue (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    restaurant_id UUID NOT NULL REFERENCES restaurants(id),
-    task_type VARCHAR(50) NOT NULL, -- menu_extraction, nutrition_analysis
-    priority INTEGER DEFAULT 5,
-    status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
-    attempts INTEGER DEFAULT 0,
-    max_attempts INTEGER DEFAULT 3,
-    error_message TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    started_at TIMESTAMP,
-    completed_at TIMESTAMP
-);
-```
-
-## 🔧 Configuration Parameters
-
-### Apify Settings
-```python
-APIFY_CONFIG = {
-    "actor_id": "compass/crawler-google-places",
-    "search_radius_km": 2.0,
-    "max_places_per_search": 20,
-    "max_images_per_place": 50,
-    "include_menu_data": True,
-    "include_reviews": False,
-    "language": "en"
-}
-```
-
-### Menu Processing Settings
-```python
-MENU_PROCESSING_CONFIG = {
-    # AI Model Configuration
-    "classification_model": "gpt-4.1-nano",     # Cost-optimized for yes/no classification
-    "analysis_model": "gpt-4.1",               # High-accuracy for detailed extraction
-    "aggregation_model": "gpt-4.1",            # Menu consolidation and deduplication
-    
-    # Token Limits
-    "classification_max_tokens": 1000,          # Sufficient for classification
-    "analysis_max_tokens": 5000,               # Increased for complex menus
-    "aggregation_max_tokens": 3000,            # Menu consolidation
-    
-    # Processing Configuration
-    "image_classification_confidence_threshold": 0.7,
-    "max_concurrent_restaurants": 10,
-    "classification_workers": 5,                # Parallel image classification
-    "analysis_workers": 3,                     # Parallel menu analysis
-    "retry_attempts": 3,
-    
-    # Image Prioritization
-    "priority_url_patterns": {
-        "/p/": 0,          # Highest priority (Google Photos direct links)
-        "/gps-cs-s/": 1,   # Medium priority (Google Street View)
-        "default": 2       # Lowest priority (other sources)
-    }
-}
-```
-
-### Database Connection Pools
-```python
-DATABASE_CONFIG = {
-    "supabase_pool_size": 20,
-    "max_connections": 100,
-    "connection_timeout": 30,
-    "query_timeout": 60
-}
-```
-
-## 🚧 Implementation Roadmap
-
-### ✅ Currently Implemented
-- [x] Basic Flask server with CORS support
-- [x] `/health` endpoint for server monitoring
-- [x] `/scan-nearby` endpoint with basic functionality
-- [x] Mock data generation system (`mock_utils.py`)
-- [x] Basic Apify API integration (`apify_utils.py`)
-- [x] Supabase connection utilities (`supabase_utils.py`)
-- [x] Basic error handling and logging
-- [x] Development testing framework
-- [x] **Complete Menu Processing Pipeline** (`tasks/menu_processing.py`)
-- [x] **AI-Powered Image Classification** (menu vs. non-menu images)
-- [x] **Menu Item Extraction** with prices, descriptions, and nutritional analysis
-- [x] **Smart Image Prioritization** (URLs with `/p/` prioritized over `/gps-cs-s/`)
-- [x] **Parallel Processing** with configurable worker threads
-- [x] **LLM Integration** for menu analysis and nutritional estimation
-- [x] **Menu Consolidation** with duplicate detection and merging
-- [x] **Cost-Optimized Processing** using `gpt-4.1-nano` for classification
-- [x] **Enhanced Testing Suite** with realistic menu processing tests
-- [x] **Comprehensive Database Schema** for restaurants and menu items
-
-### 🔨 Still Needs Implementation
-
-#### 🗄️ **Database Layer Enhancements**
-- [ ] **Complete Database Migration System**
-  ```python
-  # Implement proper database migrations
-  # Set up automated schema updates
-  # Add database versioning system
-  ```
-
-- [ ] **Smart Restaurant Lookup Optimization**
-  ```python
-  # supabase_utils.py enhancements
-  def get_finished_restaurants_in_radius(lat, lng, radius_km):
-      # Enhanced geospatial queries with PostGIS
-      # Implement intelligent caching strategies
-      # Add proximity-based relevance scoring
-  ```
-
-#### 🔄 **Production Infrastructure**
-- [ ] **Background Job Queue Integration**
-  ```python
-  # Implement Celery or similar task queue
-  # Add Redis for job management
-  # Handle long-running menu processing tasks
-  ```
-
-- [ ] **API Rate Limiting & Caching**
-  ```python
-  # Implement Redis-based caching
-  # Add API rate limiting
-  # Cache processed menu data
-  ```
-
-#### ⚡ **Enhanced API Endpoints**
-- [ ] **Processing Status Endpoint**
-  ```python
-  @app.route("/processing-status/<restaurant_id>", methods=["GET"])
-  def get_processing_status(restaurant_id):
-      # Return current processing stage
-      # Estimated completion time
-      # Error states if any
-  ```
-
-- [ ] **Menu Data Endpoint**
-  ```python
-  @app.route("/restaurant/<place_id>/menu", methods=["GET"])
-  def get_restaurant_menu(place_id):
-      # Return detailed menu with nutritional data
-      # Support filtering by dietary requirements
-      # Include confidence scores
-  ```
-
-### 🎯 **Success Metrics**
-- **Response Time**: < 2 seconds for existing data, < 30 seconds for new processing
-- **Accuracy**: > 90% menu extraction accuracy, > 85% nutrition estimation
-- **Reliability**: > 99% uptime, < 1% failed processing rate
-- **Scalability**: Handle 1000+ concurrent requests, process 100+ restaurants simultaneously
-
-## 📋 Prerequisites
-
-- Python 3.12 or higher
-- Apify API token (for real restaurant data)
-- Supabase account and credentials (for data persistence)
-- OpenAI API key (for advanced menu analysis)
-
-## 🛠️ Installation
-
-### 1. Clone the repository
-```bash
-git clone <repository-url>
-cd macromaps-backend
-```
-
-### 2. Set up Python environment
-```bash
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-```bash
-# Using pip
-pip install -r requirements.txt
-
-# Or using uv (recommended)
-uv pip install -r requirements.txt
-```
-
-### 4. Environment Configuration
-Create a `.env` file in the project root:
-```env
-APIFY_API_TOKEN=your-apify-token-here
-SUPABASE_URL=your-supabase-url-here
-SUPABASE_KEY=your-supabase-anon-key-here
-OPENAI_API_KEY=your-openai-api-key-here
-```
-
-### 5. Get API Keys
-
-#### Apify API Token
-1. Sign up at [Apify.com](https://apify.com/)
-2. Get your free API token from the dashboard
-3. Add it to your `.env` file
-
-#### Supabase Credentials
-1. Create a project at [Supabase](https://supabase.com/)
-2. Get your project URL and anon key
-3. Add them to your `.env` file
-
-#### OpenAI API Key (Optional)
-1. Get your API key from [OpenAI](https://openai.com/)
-2. Add it to your `.env` file for advanced menu analysis
-
-## 🚀 Running the Server
-
-### Development Mode
-```bash
-python main.py
-```
-
-The server will start on `http://localhost:5000` with debug mode enabled.
-
-### Production Mode
-```bash
-# Set environment variables
-export FLASK_ENV=production
-export FLASK_DEBUG=False
-
-# Run with gunicorn (recommended for production)
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 main:app
-```
-
-## 📚 API Documentation
+## 📋 Complete API Reference
 
 ### Base URL
 ```
 http://localhost:5000
 ```
 
-### Endpoints
-
-#### 1. Health Check
-```http
-GET /health
-```
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "message": "MacroMap backend is running"
-}
-```
-
-#### 2. Scan Nearby Restaurants (with Auto Menu Processing)
-```http
-POST /scan-nearby
-```
-
-**Request Body:**
-```json
-{
-  "latitude": 40.7128,
-  "longitude": -74.0060,
-  "mock": false  // Optional: set to true for mock data
-}
-```
-
-**Response (Success):**
-```json
-{
-  "success": true,
-  "message": "Found 10 restaurants",
-  "restaurants": [
-    {
-      "name": "Example Restaurant",
-      "address": "123 Main St, New York, NY 10001",
-      "rating": 4.5,
-      "reviewsCount": 156,
-      "category": "Italian restaurant",
-      "phone": "+1-555-123-4567",
-      "website": "https://example-restaurant.com",
-      "priceLevel": "$$",
-      "openingHours": [
-        "Monday: 11:00 AM–10:00 PM",
-        "Tuesday: 11:00 AM–10:00 PM",
-        "..."
-      ],
-      "location": {
-        "lat": 40.7128,
-        "lng": -74.0060
-      },
-      "placeId": "ChIJExample123",
-      "url": "https://maps.google.com/?cid=123456789",
-      "menuItems": [],  // Will be populated asynchronously
-      "images": [],
-      "imageUrls": [
-        "https://lh3.googleusercontent.com/p/...",
-        "https://lh3.googleusercontent.com/gps-cs-s/..."
-      ]
-    }
-  ],
-  "searchLocation": {
-    "latitude": 40.7128,
-    "longitude": -74.0060
-  },
-  "menu_processing": {
-    "triggered": true,
-    "restaurants_count": 10,
-    "message": "Menu processing started for 10 restaurants"
-  }
-}
-```
-
-**Response (Error):**
-```json
-{
-  "error": "Missing latitude or longitude in request"
-}
-```
-
-### Automatic Menu Processing
-When you call `/scan-nearby` with real data (not mock mode), the following happens automatically:
-
-1. **Restaurant Discovery**: Apify extracts restaurant data and saves to database with `status: 'pending'`
-2. **Background Processing**: Each restaurant gets processed in a separate background thread
-3. **Menu Analysis**: Images are classified, menus extracted, and nutritional data generated
-4. **Database Updates**: Menu items are saved and restaurant status updated to `'finished'`
-
-The initial response returns immediately with restaurant data, while menu processing continues in the background. You can check restaurant status or query menu items separately once processing completes.
-
-## 🗂️ Project Structure
-
-```
-macromaps-backend/
-├── main.py                     # Main Flask application
-├── requirements.txt            # Python dependencies
-├── pyproject.toml             # Project configuration
-├── uv.lock                    # UV lock file
-├── .env                       # Environment variables (create this)
-├── .python-version            # Python version specification
-├── tasks/                     # Processing pipeline tasks
-│   ├── __init__.py
-│   ├── restaurant_processing.py # Restaurant processing orchestrator
-│   └── menu_processing.py     # Complete menu processing pipeline
-├── utils/                     # Utility modules
-│   ├── __init__.py
-│   ├── apify_utils.py         # Apify API integration
-│   ├── mock_utils.py          # Mock data generation
-│   ├── supabase_utils.py      # Database operations
-│   └── llm_utils.py           # LLM integration for menu analysis
-├── tests/                     # Test files
-│   ├── test_apify.py          # Apify API tests
-│   ├── test_models.py         # Model tests
-│   ├── test_menu_processing.py # Menu processing pipeline tests
-│   └── example.json           # Example API responses
-├── MENU_PROCESSING.md         # Detailed menu processing documentation
-└── README.md                  # This file
-```
-
-## 🧪 Testing
-
-### Run API Tests
-```bash
-# Test Apify integration
-python tests/test_apify.py
-
-# Test menu processing pipeline with 10 random images
-python tests/test_menu_processing.py
-
-# Run all tests
-python -m pytest tests/
-```
-
-### Menu Processing Tests
-The `test_menu_processing.py` provides comprehensive testing of the AI-powered menu pipeline:
-
-```bash
-# Run menu processing tests
-cd macromaps-backend
-python tests/test_menu_processing.py
-```
-
-**Test Features:**
-- **Smart Image Selection**: Prioritizes `/p/` URLs over `/gps-cs-s/` URLs for testing
-- **Cost Tracking**: Monitors token usage and API costs across all models
-- **Detailed Reporting**: Shows classification results, menu extraction, and nutritional data
-- **Realistic Testing**: Uses actual restaurant data from `example.json`
-
-**Sample Test Output:**
-```
-📊 Image distribution: 15 /p/ URLs, 25 /gps-cs-s/ URLs, 5 other URLs
-   Selected 5 /p/ URLs (high menu probability)
-   Selected 3 /gps-cs-s/ URLs (medium menu probability)
-   Selected 2 additional URLs
-
-🍽️ TESTING IMAGE CLASSIFICATION
-   ✅ Result: MENU | Confidence: high | $0.0012 (150 tokens)
-   📋 ALL MENU ITEMS (8 items):
-      1. Margherita Pizza
-         💰 Price: 14.99
-         🏷️ Category: pizza
-         🔥 Calories: 280
-         🥗 Macros: Protein: 12g, Carbs: 36g, Fat: 10g
-```
-
-### Manual Testing
-```bash
-# Test health endpoint
-curl http://localhost:5000/health
-
-# Test restaurant search (mock mode)
-curl -X POST http://localhost:5000/scan-nearby \
-  -H "Content-Type: application/json" \
-  -d '{"latitude": 40.7128, "longitude": -74.0060, "mock": true}'
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `APIFY_API_TOKEN` | Apify API token for restaurant data | Yes | `your-apify-token-here` |
-| `SUPABASE_URL` | Supabase project URL | Yes | `your-supabase-url-here` |
-| `SUPABASE_KEY` | Supabase anon key | Yes | `your-supabase-key-here` |
-| `OPENAI_API_KEY` | OpenAI API key for menu analysis | No | None |
-| `FLASK_ENV` | Flask environment | No | `development` |
-| `FLASK_DEBUG` | Enable debug mode | No | `True` |
-
-### Apify Configuration
-The server uses the `compass/crawler-google-places` actor with the following settings:
-- Search radius: 1km (configurable)
-- Maximum places per search: 2 (configurable)
-- Includes opening hours, images, and menu data
-- Excludes personal data for privacy
-
-## 📊 Database Schema
-
-### Restaurants Table
-- `place_id` (Primary Key): Google Places ID
-- `name`: Restaurant name
-- `address`: Full address
-- `latitude`, `longitude`: GPS coordinates
-- `rating`: Average rating
-- `status`: Processing status (`pending`, `processing`, `finished`)
-- Additional metadata fields
-
-### Menu Items Table
-- `id` (Primary Key): Unique identifier
-- `place_id` (Foreign Key): Links to restaurant
-- `name`: Menu item name
-- `calories`: Caloric content
-- `protein`, `carbs`, `fat`: Macronutrient breakdown
-- `price`: Item price
-- `description`: Item description
-- `dietary_tags`: Array of dietary labels
-- `allergens`: Array of allergen information
-
-## 🛡️ Error Handling
-
-The API implements comprehensive error handling:
-- **400 Bad Request**: Missing required parameters
-- **500 Internal Server Error**: API failures or server errors
-- **Graceful Degradation**: Falls back to mock data when APIs are unavailable
-
-## 🚀 Development
-
-### Adding New Features
-1. Create utility functions in the `utils/` directory
-2. Add corresponding tests in the `tests/` directory
-3. Update the main Flask routes in `main.py`
-4. Update this README with new functionality
-
-### Code Style
-- Follow PEP 8 guidelines
-- Use meaningful variable names
-- Add docstrings to all functions
-- Include type hints where appropriate
-
-## 📝 Troubleshooting
-
-### Common Issues
-
-#### "Missing API Token" Warning
-```bash
-WARNING: Please set your APIFY_API_TOKEN environment variable
-```
-**Solution**: Add your Apify API token to the `.env` file
-
-#### "Database query failed"
-**Solution**: Check your Supabase credentials and internet connection
-
-#### "Apify API error"
-**Solution**: Verify your API token and check Apify service status
-
-### Debug Mode
-Enable debug mode for detailed error messages:
-```bash
-export FLASK_DEBUG=True
-python main.py
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Update documentation
-6. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🔮 Future Enhancements
-
-- [ ] Advanced menu analysis with LLM integration
-- [ ] Real-time nutritional calculations
-- [ ] User preference learning
-- [ ] Restaurant recommendation engine
-- [ ] Multi-language support
-- [ ] Caching layer for improved performance
-- [ ] GraphQL API endpoints
-- [ ] WebSocket support for real-time updates
-
-## 📞 Support
-
-For support, please:
-1. Check the troubleshooting section
-2. Review the test files for usage examples
-3. Open an issue on the repository
+### Authentication
+No authentication required for any endpoints.
 
 ---
 
-Made with ❤️ for the MacroMaps project
+## 🔍 Restaurant Discovery
 
-## 🤖 Menu Processing Pipeline
+### POST /scan-nearby
 
-### Overview
-The menu processing pipeline is a sophisticated AI-powered system that extracts nutritional information from restaurant images. It uses a multi-stage approach with intelligent prioritization and parallel processing.
+**Primary Use Case:** Initial restaurant discovery when user opens the app or changes location.
 
-### Pipeline Stages
+**How it works:**
+1. Returns cached restaurants within 5km radius immediately
+2. Triggers background Apify processing to fetch new restaurants if needed
+3. Each restaurant includes menu items if processing is complete
 
-#### 1. **Image Prioritization & Sorting**
-```python
-# URLs are sorted by menu likelihood:
-# Priority 0: URLs with "/p/" (highest menu probability)
-# Priority 1: URLs with "/gps-cs-s/" (medium probability)  
-# Priority 2: Other URLs (lowest probability)
-```
-
-#### 2. **Image Classification** (Cost-Optimized)
-- **Model**: `gpt-4.1-nano` (85% cost reduction vs. gpt-4.1)
-- **Purpose**: Identify which images contain actual menus
-- **Output**: Boolean classification with confidence scores
-- **Parallel Processing**: Up to 5 concurrent classifications
-
-#### 3. **Menu Analysis** (High-Detail)
-- **Model**: `gpt-4.1` with 5000 token limit
-- **Purpose**: Extract detailed menu items with nutritional data
-- **Output**: Complete menu items with prices, descriptions, macros
-- **Parallel Processing**: Up to 3 concurrent analyses
-
-#### 4. **Menu Consolidation**
-- **AI-Powered Deduplication**: Removes duplicate items across images
-- **Price Reconciliation**: Resolves conflicting pricing information
-- **Category Standardization**: Normalizes menu categories
-
-### Usage Example
-```python
-from tasks.menu_processing import MenuProcessor
-
-# Initialize processor with custom workers
-processor = MenuProcessor(
-    max_workers=10,
-    classification_workers=5,
-    analysis_workers=3
-)
-
-# Process a single restaurant
-result = processor.process_restaurant_images("place_id_123")
-
-# Process multiple restaurants
-results = processor.process_all_restaurants(["place_1", "place_2"])
-
-# Or process all pending restaurants
-results = processor.process_all_restaurants()
-```
-
-### Configuration Options
-```python
-# Menu Processing Settings
-MENU_PROCESSING_CONFIG = {
-    "classification_model": "gpt-4.1-nano",  # Cost-optimized
-    "analysis_model": "gpt-4.1",             # High-accuracy
-    "max_tokens_analysis": 5000,             # Increased for complex menus
-    "classification_workers": 5,             # Parallel image classification
-    "analysis_workers": 3,                   # Parallel menu analysis
-    "max_workers": 10                        # Overall parallelization
-}
-```
-
-### Performance Metrics
-- **Cost Efficiency**: 85% reduction in classification costs
-- **Processing Speed**: Up to 10x faster with parallel processing
-- **Menu Detection**: Prioritizes high-probability menu images first
-- **Accuracy**: Maintains high accuracy with optimized models
-
-## 📋 API Schema & Frontend Integration
-
-### Endpoints Overview
-
-The MacroMaps backend provides two main endpoints for frontend integration:
-
-#### 1. Health Check Endpoint
-- **Endpoint**: `GET /health`
-- **Purpose**: Server health verification
-- **Authentication**: None required
-
-#### 2. Restaurant Discovery Endpoint
-- **Endpoint**: `POST /scan-nearby`
-- **Purpose**: Find restaurants near a location with complete menu analysis
-- **Authentication**: None required
-
----
-
-### 🔍 POST /scan-nearby
-
-**Description**: Discovers restaurants within a specified radius and returns comprehensive data including AI-analyzed menu items with nutritional information.
-
-#### Request Format
-
-```json
-{
-  "latitude": 37.7749,
-  "longitude": -122.4194,
-  "radius": 1.0,
-  "mock": false
-}
-```
-
-#### Request Parameters
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `latitude` | `number` | ✅ | - | GPS latitude coordinate |
-| `longitude` | `number` | ✅ | - | GPS longitude coordinate |  
-| `radius` | `number` | ❌ | `1.0` | Search radius in kilometers (note: currently fixed at 5km for caching) |
-| `mock` | `boolean` | ❌ | `false` | Enable mock mode for testing |
-
-#### Response Format
-
-```json
-{
-  "success": true,
-  "message": "Found 12 cached restaurants within 5.0km",
-  "restaurants": [
-    {
-      "name": "Bella Italia",
-      "address": "123 Main St, San Francisco, CA",
-      "rating": 4.3,
-      "reviewsCount": 284,
-      "category": "Italian restaurant",
-      "phone": "+1-555-0123",
-      "website": "https://bella-italia.com",
-      "priceLevel": "$$",
-      "openingHours": [
-        "Monday: 11:00 AM – 10:00 PM",
-        "Tuesday: 11:00 AM – 10:00 PM",
-        "Wednesday: 11:00 AM – 10:00 PM",
-        "Thursday: 11:00 AM – 10:00 PM",
-        "Friday: 11:00 AM – 11:00 PM",
-        "Saturday: 11:00 AM – 11:00 PM",
-        "Sunday: 12:00 PM – 9:00 PM"
-      ],
-      "location": {
-        "lat": 37.7749,
-        "lng": -122.4194
-      },
-      "placeId": "ChIJd8BlQ2BZwokRAFUEcm_qrcA",
-      "url": "https://maps.google.com/?cid=123456789",
-      "distance_km": 0.8,
-      "imageUrls": [
-        "https://lh5.googleusercontent.com/p/restaurant-1.jpg",
-        "https://lh5.googleusercontent.com/p/restaurant-2.jpg"
-      ],
-      "images": {
-        "exterior": ["https://lh5.googleusercontent.com/p/ext-1.jpg"],
-        "interior": ["https://lh5.googleusercontent.com/p/int-1.jpg"],
-        "menu": ["https://lh5.googleusercontent.com/p/menu-1.jpg"]
-      },
-      "processing_status": "finished",
-      "has_menu_items": true,
-      "menuItems": [
-        {
-          "id": "550e8400-e29b-41d4-a716-446655440000",
-          "restaurant_id": "550e8400-e29b-41d4-a716-446655440001",
-          "name": "Margherita Pizza",
-          "description": "Classic pizza with fresh tomatoes, mozzarella, and basil",
-          "price": 16.99,
-          "currency": "USD",
-          "calories": 285,
-          "serving_size": 350.0,
-          "protein": 12.5,
-          "carbs": 36.2,
-          "fat": 10.8,
-          "fiber": 2.3,
-          "sugar": 4.1,
-          "sodium": 640.0,
-          "dietary_tags": ["vegetarian"],
-          "allergens": ["gluten", "dairy"],
-          "spice_level": null,
-          "category": "Pizza",
-          "subcategory": "Classic",
-          "menu_section": "Main Courses",
-          "extracted_from_image_url": "https://lh5.googleusercontent.com/p/menu-1.jpg",
-          "confidence_score": 0.92,
-          "llm_processed": true,
-          "is_available": true,
-          "seasonal": false,
-          "created_at": "2024-01-15T10:30:00Z",
-          "updated_at": "2024-01-15T10:30:00Z"
-        }
-      ]
-    }
-  ],
-  "searchLocation": {
-    "latitude": 37.7749,
-    "longitude": -122.4194,
-    "radius_km": 5.0
-  },
-  "processing_summary": {
-    "total_restaurants": 12,
-    "completed": 12,
-    "pending": 0,
-    "processing": 0,
-    "new": 0,
-    "restaurants_with_menu": 8
-  },
-  "background_processing": {
-    "status": "skipped",
-    "message": "Background processing skipped - 12 restaurants already cached"
-  },
-  "data_source": "cached"
-}
-```
-
----
-
-### 🏥 GET /health
-
-#### Response Format
-
-```json
-{
-  "status": "healthy",
-  "message": "MacroMap backend is running"
-}
-```
-
----
-
-### 📊 Data Structure Schemas
-
-#### Restaurant Object Schema
-
-| Field | Type | Description | Example |
-|-------|------|-------------|---------|
-| `name` | `string` | Restaurant name | `"Bella Italia"` |
-| `address` | `string` | Full street address | `"123 Main St, San Francisco, CA"` |
-| `rating` | `number` \| `null` | Google rating (1-5 scale) | `4.3` |
-| `reviewsCount` | `number` | Number of Google reviews | `284` |
-| `category` | `string` | Restaurant category/cuisine | `"Italian restaurant"` |
-| `phone` | `string` | Phone number | `"+1-555-0123"` |
-| `website` | `string` | Restaurant website URL | `"https://bella-italia.com"` |
-| `priceLevel` | `string` | Price range indicator | `"$$"` ($ to $$$$) |
-| `openingHours` | `string[]` | Weekly opening hours | `["Monday: 11:00 AM – 10:00 PM", ...]` |
-| `location` | `Location` | GPS coordinates | `{"lat": 37.7749, "lng": -122.4194}` |
-| `placeId` | `string` | Google Places ID | `"ChIJd8BlQ2BZwokRAFUEcm_qrcA"` |
-| `url` | `string` | Google Maps URL | `"https://maps.google.com/?cid=123456789"` |
-| `distance_km` | `number` | Distance from search center (km) | `0.8` |
-| `imageUrls` | `string[]` | All restaurant image URLs | `["https://...", ...]` |
-| `images` | `Images` | Categorized image URLs | `{"exterior": [...], "interior": [...], "menu": [...]}` |
-| `processing_status` | `string` | Menu processing status | `"finished"` \| `"processing"` \| `"pending"` |
-| `has_menu_items` | `boolean` | Whether menu items are available | `true` |
-| `menuItems` | `MenuItem[]` | Array of menu items with nutrition | `[...]` |
-
-#### MenuItem Object Schema
-
-| Field | Type | Description | Example |
-|-------|------|-------------|---------|
-| `id` | `string` | Unique menu item ID (UUID) | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `restaurant_id` | `string` | Restaurant ID (UUID) | `"550e8400-e29b-41d4-a716-446655440001"` |
-| `name` | `string` | Item name | `"Margherita Pizza"` |
-| `description` | `string` \| `null` | Item description | `"Classic pizza with fresh tomatoes..."` |
-| `price` | `number` \| `null` | Price in local currency | `16.99` |
-| `currency` | `string` \| `null` | Currency code | `"USD"` |
-| `calories` | `number` \| `null` | Estimated calories | `285` |
-| `serving_size` | `number` \| `null` | Serving size in grams | `350.0` |
-| `protein` | `number` \| `null` | Protein content (grams) | `12.5` |
-| `carbs` | `number` \| `null` | Carbohydrate content (grams) | `36.2` |
-| `fat` | `number` \| `null` | Fat content (grams) | `10.8` |
-| `fiber` | `number` \| `null` | Fiber content (grams) | `2.3` |
-| `sugar` | `number` \| `null` | Sugar content (grams) | `4.1` |
-| `sodium` | `number` \| `null` | Sodium content (milligrams) | `640.0` |
-| `dietary_tags` | `string[]` | Dietary classifications | `["vegetarian", "gluten-free"]` |
-| `allergens` | `string[]` | Known allergens | `["gluten", "dairy", "nuts"]` |
-| `spice_level` | `string` \| `null` | Spice level | `"mild"` \| `"medium"` \| `"hot"` |
-| `category` | `string` | Menu category | `"Pizza"` |
-| `subcategory` | `string` \| `null` | Menu subcategory | `"Classic"` |
-| `menu_section` | `string` \| `null` | Menu section | `"Main Courses"` |
-| `extracted_from_image_url` | `string` | Source image URL | `"https://lh5.googleusercontent.com/p/menu-1.jpg"` |
-| `confidence_score` | `number` | AI confidence (0.0-1.0) | `0.92` |
-| `llm_processed` | `boolean` | Whether processed by AI | `true` |
-| `is_available` | `boolean` | Item availability | `true` |
-| `seasonal` | `boolean` | Seasonal availability | `false` |
-| `created_at` | `string` | Creation timestamp (ISO 8601) | `"2024-01-15T10:30:00Z"` |
-| `updated_at` | `string` | Last update timestamp (ISO 8601) | `"2024-01-15T10:30:00Z"` |
-
-#### Supporting Type Schemas
-
-```typescript
-// Location coordinate object
-interface Location {
-  lat: number;
-  lng: number;
-}
-
-// Categorized restaurant images
-interface Images {
-  exterior: string[];
-  interior: string[];
-  menu: string[];
-}
-
-// Processing status enumeration
-type ProcessingStatus = "pending" | "processing" | "finished" | "error";
-
-// Price level enumeration
-type PriceLevel = "$" | "$$" | "$$$" | "$$$$";
-
-// Spice level enumeration
-type SpiceLevel = "mild" | "medium" | "hot";
-```
-
----
-
-### 🔄 Processing States
-
-The API uses a sophisticated background processing system:
-
-1. **Immediate Response**: Returns cached restaurants instantly
-2. **Background Processing**: Fetches new restaurants and analyzes menus
-3. **Status Updates**: Restaurants progress through processing states
-
-#### Processing Status Values
-
-| Status | Description |
-|--------|-------------|
-| `pending` | Restaurant saved, menu processing not started |
-| `processing` | Currently analyzing menu images with AI |
-| `finished` | Menu analysis complete, items available |
-| `error` | Processing failed, manual review needed |
-
----
-
-### 🎭 Mock Mode
-
-For development and testing, use `"mock": true` in the request:
-
-```json
-{
-  "latitude": 37.7749,
-  "longitude": -122.4194,
-  "mock": true
-}
-```
-
-Mock mode generates realistic restaurant data with:
-- Varied cuisines and categories
-- Realistic nutritional data
-- Sample menu items with proper macronutrient profiles
-- Diverse restaurant ratings and reviews
-
----
-
-### ⚠️ Error Responses
-
-#### 400 Bad Request
-```json
-{
-  "error": "Missing latitude or longitude in request"
-}
-```
-
-#### 500 Internal Server Error
-```json
-{
-  "error": "Internal server error",
-  "details": "Specific error message"
-}
-```
-
----
-
-### 📈 Usage Examples
-
-#### Frontend TypeScript Integration
-
+#### Request
 ```typescript
 interface ScanNearbyRequest {
   latitude: number;
   longitude: number;
-  radius?: number;
-  mock?: boolean;
+  radius?: number; // Currently ignored - fixed at 5km
 }
+```
 
+#### Example Request
+```typescript
+const response = await fetch('http://localhost:5000/scan-nearby', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    latitude: 37.7749,
+    longitude: -122.4194
+  })
+});
+
+const data = await response.json();
+```
+
+#### Response Schema
+```typescript
 interface ScanNearbyResponse {
   success: boolean;
   message: string;
@@ -1408,49 +103,1049 @@ interface ScanNearbyResponse {
     restaurants_with_menu: number;
   };
   background_processing: {
-    status: string;
+    status: "started" | "skipped";
     message: string;
   };
-  data_source: string;
+  data_source: "cached" | "none";
 }
 
-// Usage example
-const searchRestaurants = async (lat: number, lng: number): Promise<ScanNearbyResponse> => {
-  const response = await fetch('http://localhost:5000/scan-nearby', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      latitude: lat,
-      longitude: lng,
-      radius: 2.0
-    })
+interface Restaurant {
+  // Basic Info
+  name: string;
+  address: string;
+  phone: string;
+  website: string;
+  
+  // Location & Distance
+  location: {
+    lat: number;
+    lng: number;
+  };
+  distance_km: number;
+  
+  // Ratings & Classification
+  rating: number | null;
+  reviewsCount: number;
+  category: string;
+  priceLevel: "$" | "$$" | "$$$" | "$$$$" | "";
+  
+  // Schedule
+  openingHours: string[];
+  
+  // Identifiers
+  placeId: string;
+  url: string; // Google Maps URL
+  
+  // Images
+  imageUrls: string[];
+  images: {
+    exterior?: string[];
+    interior?: string[];
+    menu?: string[];
+  };
+  
+  // Processing Status
+  processing_status: "pending" | "processing" | "finished" | "error";
+  has_menu_items: boolean;
+  
+  // Menu Items (if available)
+  menuItems: MenuItem[];
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+}
+```
+
+#### Example Response
+```json
+{
+  "success": true,
+  "message": "Found 8 cached restaurants within 5.0km",
+  "restaurants": [
+    {
+      "name": "Tony's Little Star Pizza",
+      "address": "846 Divisadero St, San Francisco, CA 94117",
+      "rating": 4.2,
+      "reviewsCount": 1847,
+      "category": "Pizza restaurant",
+      "phone": "+1-415-441-1001",
+      "website": "https://tonys-little-star.com",
+      "priceLevel": "$$",
+      "openingHours": [
+        "Monday: 5:00 – 11:00 PM",
+        "Tuesday: 5:00 – 11:00 PM",
+        "Wednesday: 5:00 – 11:00 PM"
+      ],
+      "location": {
+        "lat": 37.7749,
+        "lng": -122.4194
+      },
+      "placeId": "ChIJd8BlQ2BZwokRAFUEcm_qrcA",
+      "url": "https://maps.google.com/?cid=123456789",
+      "distance_km": 0.3,
+      "imageUrls": [
+        "https://lh5.googleusercontent.com/p/AF1QipN..."
+      ],
+      "images": {
+        "exterior": ["https://lh5.googleusercontent.com/p/exterior1.jpg"],
+        "menu": ["https://lh5.googleusercontent.com/p/menu1.jpg"]
+      },
+      "processing_status": "finished",
+      "has_menu_items": true,
+      "menuItems": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "name": "Margherita Pizza",
+          "description": "Fresh mozzarella, tomato sauce, basil",
+          "price": 18.50,
+          "currency": "USD",
+          "calories": 320,
+          "protein": 14.2,
+          "carbs": 42.1,
+          "fat": 11.8,
+          "category": "Pizza"
+        }
+      ]
+    }
+  ],
+  "processing_summary": {
+    "total_restaurants": 8,
+    "completed": 8,
+    "restaurants_with_menu": 6
+  }
+}
+```
+
+---
+
+## 🏪 Restaurant Endpoints
+
+### GET /restaurants
+
+**Use Case:** Paginated browsing of restaurants with sorting options.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `latitude` | `number` | ✅ | - | Search center latitude |
+| `longitude` | `number` | ✅ | - | Search center longitude |
+| `page` | `number` | ❌ | `1` | Page number (1-based) |
+| `limit` | `number` | ❌ | `20` | Items per page (max 100) |
+| `radius` | `number` | ❌ | `10.0` | Search radius in km (0.1-50) |
+| `sort_by` | `string` | ❌ | `"distance"` | Sort criteria |
+
+#### Sort Options
+- `distance` - Closest restaurants first
+- `rating` - Highest rated first
+- `reviews_count` - Most reviewed first
+- `name` - Alphabetical order
+
+#### Example Usage
+```typescript
+// Get first page of restaurants sorted by rating
+const getTopRatedRestaurants = async (lat: number, lng: number) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    page: '1',
+    limit: '10',
+    sort_by: 'rating'
   });
   
+  const response = await fetch(`http://localhost:5000/restaurants?${params}`);
+  return response.json();
+};
+
+// Load more restaurants (pagination)
+const loadMoreRestaurants = async (lat: number, lng: number, page: number) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    page: page.toString(),
+    limit: '20'
+  });
+  
+  const response = await fetch(`http://localhost:5000/restaurants?${params}`);
   return response.json();
 };
 ```
 
-#### React Hook Example
+#### Response Schema
+```typescript
+interface RestaurantsResponse {
+  success: boolean;
+  data: Restaurant[]; // Same Restaurant interface as above (without menuItems)
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+  search_params: {
+    latitude: number;
+    longitude: number;
+    radius_km: number;
+    sort_by: string;
+  };
+}
+```
+
+### GET /restaurants/\<restaurant_id\>
+
+**Use Case:** Get detailed information for a specific restaurant.
+
+#### Path Parameters
+- `restaurant_id` - Restaurant UUID or Google place_id
+
+#### Example Usage
+```typescript
+const getRestaurantDetails = async (restaurantId: string) => {
+  const response = await fetch(`http://localhost:5000/restaurants/${restaurantId}`);
+  return response.json();
+};
+
+// Works with both UUID and place_id
+await getRestaurantDetails('550e8400-e29b-41d4-a716-446655440001');
+await getRestaurantDetails('ChIJd8BlQ2BZwokRAFUEcm_qrcA');
+```
+
+#### Response Schema
+```typescript
+interface SingleRestaurantResponse {
+  success: boolean;
+  data: Restaurant; // Full restaurant object without menuItems
+}
+```
+
+---
+
+## 🍽️ Menu Item Endpoints
+
+### GET /menu-items
+
+**Use Case:** Advanced menu item search across all restaurants with powerful sorting capabilities.
+
+#### Key Features
+- **Cross-restaurant search** - Find menu items from all restaurants in area
+- **Advanced sorting** - Including ratio-based sorting (e.g., protein/fat ratio)
+- **Nutritional filtering** - Sort by calories, protein, etc.
+- **Value sorting** - Sort by calories per dollar, protein per calorie, etc.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `latitude` | `number` | ✅ | - | Search center latitude |
+| `longitude` | `number` | ✅ | - | Search center longitude |
+| `page` | `number` | ❌ | `1` | Page number (1-based) |
+| `limit` | `number` | ❌ | `20` | Items per page (max 100) |
+| `radius` | `number` | ❌ | `10.0` | Search radius in km |
+| `sort_by` | `string` | ❌ | `"restaurant_distance"` | Sort criteria |
+| `sort_order` | `string` | ❌ | `"asc"` | `"asc"` or `"desc"` |
+| `restaurant_id` | `string` | ❌ | - | Filter by specific restaurant |
+
+#### Advanced Sort Options
+
+**Standard Fields:**
+- `restaurant_distance` - Distance from search center
+- `price` - Item price
+- `calories` - Caloric content
+- `protein`, `carbs`, `fat`, `fiber`, `sugar`, `sodium` - Nutritional values
+- `name` - Alphabetical order
+
+**Ratio-Based Sorting (Advanced):**
+Format: `field1/field2` where both fields are from: `protein`, `carbs`, `fat`, `fiber`, `sugar`, `sodium`, `calories`, `price`
+
+Examples:
+- `protein/fat` - Protein to fat ratio (lean options)
+- `protein/calories` - Protein per calorie (protein efficiency)
+- `calories/price` - Calories per dollar (value meals)
+- `fiber/carbs` - Fiber to carb ratio (complex carbs)
+
+#### Example Usage Patterns
 
 ```typescript
-const useRestaurantSearch = () => {
+// Find high-protein items nearby
+const getHighProteinItems = async (lat: number, lng: number) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    sort_by: 'protein',
+    sort_order: 'desc',
+    limit: '20'
+  });
+  
+  return fetch(`http://localhost:5000/menu-items?${params}`).then(r => r.json());
+};
+
+// Find best protein-to-fat ratio items (lean protein)
+const getLeanProteinItems = async (lat: number, lng: number) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    sort_by: 'protein/fat',
+    sort_order: 'desc',
+    limit: '20'
+  });
+  
+  return fetch(`http://localhost:5000/menu-items?${params}`).then(r => r.json());
+};
+
+// Find best value meals (calories per dollar)
+const getValueMeals = async (lat: number, lng: number) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    sort_by: 'calories/price',
+    sort_order: 'desc',
+    limit: '20'
+  });
+  
+  return fetch(`http://localhost:5000/menu-items?${params}`).then(r => r.json());
+};
+
+// Find items from specific restaurant
+const getRestaurantMenuItems = async (lat: number, lng: number, restaurantId: string) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    restaurant_id: restaurantId,
+    sort_by: 'calories',
+    sort_order: 'asc'
+  });
+  
+  return fetch(`http://localhost:5000/menu-items?${params}`).then(r => r.json());
+};
+```
+
+#### Response Schema
+```typescript
+interface MenuItem {
+  // Identifiers
+  id: string; // UUID
+  restaurant_id: string;
+  restaurant_name: string;
+  restaurant_distance_km: number;
+  restaurant_place_id: string;
+  
+  // Basic Info
+  name: string;
+  description: string | null;
+  price: number | null;
+  currency: string;
+  
+  // Nutritional Data (AI-generated)
+  calories: number | null;
+  serving_size: number | null; // grams
+  protein: number | null; // grams
+  carbs: number | null; // grams
+  fat: number | null; // grams
+  fiber: number | null; // grams
+  sugar: number | null; // grams
+  sodium: number | null; // milligrams
+  
+  // Classifications
+  dietary_tags: string[]; // ["vegetarian", "gluten-free", etc.]
+  allergens: string[]; // ["nuts", "dairy", "gluten", etc.]
+  spice_level: string | null; // "mild", "medium", "hot"
+  
+  // Menu Organization
+  category: string; // "Pizza", "Appetizers", "Entrees", etc.
+  subcategory: string | null;
+  menu_section: string | null;
+  
+  // Metadata
+  confidence_score: number; // AI confidence (0.0-1.0)
+  is_available: boolean;
+  seasonal: boolean;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+  
+  // Calculated Ratio (only present for ratio sorts)
+  calculated_ratio?: {
+    value: number;
+    numerator: string;
+    denominator: string;
+    display: string; // "protein/fat"
+  };
+}
+
+interface MenuItemsResponse {
+  success: boolean;
+  data: MenuItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+  search_params: {
+    latitude: number;
+    longitude: number;
+    radius_km: number;
+    sort_by: string;
+    sort_order: string;
+    restaurant_id: string | null;
+  };
+}
+```
+
+#### Example Response (Protein/Fat Ratio Sort)
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "restaurant_id": "550e8400-e29b-41d4-a716-446655440001",
+      "restaurant_name": "Tony's Little Star Pizza",
+      "restaurant_distance_km": 0.3,
+      "restaurant_place_id": "ChIJd8BlQ2BZwokRAFUEcm_qrcA",
+      "name": "Grilled Chicken Salad",
+      "description": "Grilled chicken breast over mixed greens",
+      "price": 14.50,
+      "currency": "USD",
+      "calories": 285,
+      "serving_size": 350.0,
+      "protein": 32.5,
+      "carbs": 12.2,
+      "fat": 8.1,
+      "fiber": 4.2,
+      "sugar": 6.1,
+      "sodium": 420.0,
+      "dietary_tags": ["gluten-free"],
+      "allergens": ["dairy"],
+      "spice_level": null,
+      "category": "Salads",
+      "subcategory": "Main Salads",
+      "menu_section": "Entrees",
+      "confidence_score": 0.94,
+      "is_available": true,
+      "seasonal": false,
+      "calculated_ratio": {
+        "value": 4.01,
+        "numerator": "protein",
+        "denominator": "fat",
+        "display": "protein/fat"
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 156,
+    "total_pages": 8,
+    "has_next": true,
+    "has_prev": false
+  }
+}
+```
+
+### GET /restaurants/\<restaurant_id\>/menu
+
+**Use Case:** Get all menu items for a specific restaurant with sorting.
+
+#### Path Parameters
+- `restaurant_id` - Restaurant UUID or Google place_id
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `latitude` | `number` | ✅ | - | For distance calculation |
+| `longitude` | `number` | ✅ | - | For distance calculation |
+| `page` | `number` | ❌ | `1` | Page number |
+| `limit` | `number` | ❌ | `50` | Items per page (max 100) |
+| `sort_by` | `string` | ❌ | `"name"` | Sort criteria |
+| `sort_order` | `string` | ❌ | `"asc"` | Sort order |
+
+#### Sort Options
+All nutritional fields and ratios (same as `/menu-items`) except `restaurant_distance`.
+
+#### Example Usage
+```typescript
+const getRestaurantMenu = async (
+  restaurantId: string, 
+  lat: number, 
+  lng: number,
+  sortBy: string = 'calories'
+) => {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    sort_by: sortBy,
+    sort_order: 'asc',
+    limit: '50'
+  });
+  
+  const response = await fetch(
+    `http://localhost:5000/restaurants/${restaurantId}/menu?${params}`
+  );
+  return response.json();
+};
+```
+
+#### Response Schema
+```typescript
+interface RestaurantMenuResponse {
+  success: boolean;
+  restaurant: {
+    id: string;
+    name: string;
+    place_id: string;
+    distance_km: number;
+  };
+  data: MenuItem[]; // Same MenuItem interface
+  pagination: PaginationInfo;
+  search_params: {
+    latitude: number;
+    longitude: number;
+    sort_by: string;
+    sort_order: string;
+    restaurant_id: string;
+  };
+}
+```
+
+---
+
+## 🏥 Health Check
+
+### GET /health
+
+**Use Case:** Check if the API server is running.
+
+#### Example Usage
+```typescript
+const checkHealth = async () => {
+  const response = await fetch('http://localhost:5000/health');
+  return response.json();
+};
+```
+
+#### Response
+```json
+{
+  "status": "healthy",
+  "message": "MacroMap backend is running"
+}
+```
+
+---
+
+## 🎯 Frontend Integration Patterns
+
+### 1. Restaurant Discovery Flow
+
+```typescript
+interface UseRestaurantDiscovery {
+  restaurants: Restaurant[];
+  loading: boolean;
+  error: string | null;
+  discoverRestaurants: (lat: number, lng: number) => Promise<void>;
+  loadMoreRestaurants: (page: number) => Promise<void>;
+}
+
+const useRestaurantDiscovery = (): UseRestaurantDiscovery => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  const searchNearby = async (lat: number, lng: number) => {
+  const [error, setError] = useState<string | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  const discoverRestaurants = async (lat: number, lng: number) => {
     setLoading(true);
+    setError(null);
+    setCurrentLocation({ lat, lng });
+    
     try {
-      const data = await searchRestaurants(lat, lng);
-      setRestaurants(data.restaurants);
-    } catch (error) {
-      console.error('Failed to fetch restaurants:', error);
+      // Step 1: Get immediate cached results
+      const response = await fetch('http://localhost:5000/scan-nearby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setRestaurants(data.restaurants);
+        
+        // Step 2: Background processing will continue
+        if (data.background_processing.status === 'started') {
+          console.log('Background processing started for new restaurants');
+        }
+      } else {
+        setError(data.error || 'Failed to discover restaurants');
+      }
+    } catch (err) {
+      setError('Network error occurred');
     } finally {
       setLoading(false);
     }
   };
-  
-  return { restaurants, loading, searchNearby };
+
+  const loadMoreRestaurants = async (page: number) => {
+    if (!currentLocation) return;
+    
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        latitude: currentLocation.lat.toString(),
+        longitude: currentLocation.lng.toString(),
+        page: page.toString(),
+        limit: '20'
+      });
+      
+      const response = await fetch(`http://localhost:5000/restaurants?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        if (page === 1) {
+          setRestaurants(data.data);
+        } else {
+          setRestaurants(prev => [...prev, ...data.data]);
+        }
+      }
+    } catch (err) {
+      setError('Failed to load restaurants');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { restaurants, loading, error, discoverRestaurants, loadMoreRestaurants };
 };
 ```
+
+### 2. Advanced Menu Search Hook
+
+```typescript
+interface MenuSearchFilters {
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  restaurantId?: string;
+}
+
+interface UseMenuSearch {
+  menuItems: MenuItem[];
+  loading: boolean;
+  error: string | null;
+  pagination: PaginationInfo | null;
+  searchMenuItems: (lat: number, lng: number, filters: MenuSearchFilters) => Promise<void>;
+  loadMoreItems: (page: number) => Promise<void>;
+}
+
+const useMenuSearch = (): UseMenuSearch => {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [currentSearch, setCurrentSearch] = useState<{
+    lat: number;
+    lng: number;
+    filters: MenuSearchFilters;
+  } | null>(null);
+
+  const searchMenuItems = async (
+    lat: number, 
+    lng: number, 
+    filters: MenuSearchFilters
+  ) => {
+    setLoading(true);
+    setError(null);
+    setCurrentSearch({ lat, lng, filters });
+    
+    try {
+      const params = new URLSearchParams({
+        latitude: lat.toString(),
+        longitude: lng.toString(),
+        sort_by: filters.sortBy,
+        sort_order: filters.sortOrder,
+        page: '1',
+        limit: '20',
+        ...(filters.restaurantId && { restaurant_id: filters.restaurantId })
+      });
+      
+      const response = await fetch(`http://localhost:5000/menu-items?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setMenuItems(data.data);
+        setPagination(data.pagination);
+      } else {
+        setError(data.error || 'Failed to search menu items');
+      }
+    } catch (err) {
+      setError('Network error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMoreItems = async (page: number) => {
+    if (!currentSearch) return;
+    
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        latitude: currentSearch.lat.toString(),
+        longitude: currentSearch.lng.toString(),
+        sort_by: currentSearch.filters.sortBy,
+        sort_order: currentSearch.filters.sortOrder,
+        page: page.toString(),
+        limit: '20',
+        ...(currentSearch.filters.restaurantId && { 
+          restaurant_id: currentSearch.filters.restaurantId 
+        })
+      });
+      
+      const response = await fetch(`http://localhost:5000/menu-items?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setMenuItems(prev => [...prev, ...data.data]);
+        setPagination(data.pagination);
+      }
+    } catch (err) {
+      setError('Failed to load more items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { menuItems, loading, error, pagination, searchMenuItems, loadMoreItems };
+};
+```
+
+### 3. Smart Filter Component
+
+```typescript
+interface MenuFilterProps {
+  onFilterChange: (filters: MenuSearchFilters) => void;
+  currentFilters: MenuSearchFilters;
+}
+
+const MenuFilter: React.FC<MenuFilterProps> = ({ onFilterChange, currentFilters }) => {
+  const [sortBy, setSortBy] = useState(currentFilters.sortBy);
+  const [sortOrder, setSortOrder] = useState(currentFilters.sortOrder);
+  
+  const sortOptions = [
+    // Distance & Basic
+    { value: 'restaurant_distance', label: 'Distance', category: 'Location' },
+    { value: 'price', label: 'Price', category: 'Basic' },
+    { value: 'name', label: 'Name', category: 'Basic' },
+    
+    // Nutritional
+    { value: 'calories', label: 'Calories', category: 'Nutrition' },
+    { value: 'protein', label: 'Protein', category: 'Nutrition' },
+    { value: 'carbs', label: 'Carbs', category: 'Nutrition' },
+    { value: 'fat', label: 'Fat', category: 'Nutrition' },
+    { value: 'fiber', label: 'Fiber', category: 'Nutrition' },
+    { value: 'sodium', label: 'Sodium', category: 'Nutrition' },
+    
+    // Advanced Ratios
+    { value: 'protein/fat', label: 'Protein/Fat Ratio', category: 'Ratios' },
+    { value: 'protein/calories', label: 'Protein per Calorie', category: 'Ratios' },
+    { value: 'calories/price', label: 'Calories per Dollar', category: 'Ratios' },
+    { value: 'fiber/carbs', label: 'Fiber/Carb Ratio', category: 'Ratios' },
+  ];
+  
+  const groupedOptions = sortOptions.reduce((acc, option) => {
+    if (!acc[option.category]) {
+      acc[option.category] = [];
+    }
+    acc[option.category].push(option);
+    return acc;
+  }, {} as Record<string, typeof sortOptions>);
+  
+  const handleApplyFilters = () => {
+    onFilterChange({
+      sortBy,
+      sortOrder: sortOrder as 'asc' | 'desc'
+    });
+  };
+  
+  return (
+    <div className="menu-filter">
+      <div className="filter-section">
+        <label htmlFor="sort-by">Sort By:</label>
+        <select 
+          id="sort-by"
+          value={sortBy} 
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          {Object.entries(groupedOptions).map(([category, options]) => (
+            <optgroup key={category} label={category}>
+              {options.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      
+      <div className="filter-section">
+        <label htmlFor="sort-order">Order:</label>
+        <select 
+          id="sort-order"
+          value={sortOrder} 
+          onChange={(e) => setSortOrder(e.target.value)}
+        >
+          <option value="desc">Highest First</option>
+          <option value="asc">Lowest First</option>
+        </select>
+      </div>
+      
+      <button onClick={handleApplyFilters} className="apply-filters-btn">
+        Apply Filters
+      </button>
+    </div>
+  );
+};
+```
+
+### 4. Pagination Component
+
+```typescript
+interface PaginationProps {
+  pagination: PaginationInfo;
+  onPageChange: (page: number) => void;
+  loading?: boolean;
+}
+
+const Pagination: React.FC<PaginationProps> = ({ 
+  pagination, 
+  onPageChange, 
+  loading = false 
+}) => {
+  const { page, total_pages, has_prev, has_next, total } = pagination;
+  
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxPages = 5;
+    let start = Math.max(1, page - Math.floor(maxPages / 2));
+    let end = Math.min(total_pages, start + maxPages - 1);
+    
+    if (end - start + 1 < maxPages) {
+      start = Math.max(1, end - maxPages + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  };
+  
+  return (
+    <div className="pagination">
+      <div className="pagination-info">
+        Showing page {page} of {total_pages} ({total} total items)
+      </div>
+      
+      <div className="pagination-controls">
+        <button 
+          disabled={!has_prev || loading} 
+          onClick={() => onPageChange(page - 1)}
+          className="pagination-btn"
+        >
+          Previous
+        </button>
+        
+        {getPageNumbers().map(pageNum => (
+          <button
+            key={pageNum}
+            disabled={loading}
+            onClick={() => onPageChange(pageNum)}
+            className={`pagination-btn ${pageNum === page ? 'active' : ''}`}
+          >
+            {pageNum}
+          </button>
+        ))}
+        
+        <button 
+          disabled={!has_next || loading} 
+          onClick={() => onPageChange(page + 1)}
+          className="pagination-btn"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## ⚠️ Error Handling
+
+All endpoints return consistent error responses:
+
+### HTTP Status Codes
+- `200` - Success
+- `400` - Bad Request (invalid parameters)
+- `404` - Not Found (restaurant not found)
+- `500` - Internal Server Error
+
+### Error Response Format
+```typescript
+interface ErrorResponse {
+  error: string;
+  details?: string; // Additional error information
+}
+```
+
+### Example Error Responses
+```json
+// Missing required parameters
+{
+  "error": "Missing required parameters: latitude and longitude"
+}
+
+// Invalid sort parameter
+{
+  "error": "Invalid sort_by. Must be one of: distance, rating, reviews_count, name or a ratio like 'protein/fat'"
+}
+
+// Restaurant not found
+{
+  "error": "Restaurant not found"
+}
+
+// Internal server error
+{
+  "error": "Internal server error",
+  "details": "Database connection failed"
+}
+```
+
+### Frontend Error Handling Pattern
+```typescript
+const handleApiCall = async (apiCall: () => Promise<Response>) => {
+  try {
+    const response = await apiCall();
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+    
+    if (!data.success) {
+      throw new Error(data.error || 'API call failed');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
+```
+
+---
+
+## 🚀 Performance Best Practices
+
+### 1. Caching Strategy
+- **Restaurant Discovery**: First call returns cached results immediately
+- **Background Processing**: New data fetched asynchronously
+- **Client-Side Caching**: Cache responses for 5-10 minutes
+
+### 2. Pagination Best Practices
+- Use reasonable page sizes (10-50 items)
+- Implement infinite scroll for better UX
+- Show loading states during page transitions
+
+### 3. Location Updates
+- Debounce location updates to avoid excessive API calls
+- Only trigger new searches when location changes significantly (>1km)
+
+### 4. Optimistic Loading
+```typescript
+const optimisticSearch = async (lat: number, lng: number, filters: MenuSearchFilters) => {
+  // Show previous results immediately
+  setLoading(true);
+  
+  try {
+    // Start the API call
+    const newResults = await searchMenuItems(lat, lng, filters);
+    
+    // Update with new results
+    setMenuItems(newResults.data);
+  } catch (error) {
+    // Keep previous results on error
+    setError('Failed to load new results');
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+---
+
+## 🔧 Setup and Development
+
+### Prerequisites
+- Python 3.12+
+- Node.js 18+ (for frontend)
+- Environment variables configured
+
+### Environment Variables
+```env
+APIFY_API_TOKEN=your-apify-token-here
+SUPABASE_URL=your-supabase-url-here  
+SUPABASE_KEY=your-supabase-anon-key-here
+OPENAI_API_KEY=your-openai-api-key-here
+```
+
+### Running the Backend
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start development server
+python main.py
+
+# Server runs on http://localhost:5000
+```
+
+### Testing API Endpoints
+```bash
+# Health check
+curl http://localhost:5000/health
+
+# Restaurant discovery
+curl -X POST http://localhost:5000/scan-nearby \
+  -H "Content-Type: application/json" \
+  -d '{"latitude": 37.7749, "longitude": -122.4194}'
+
+# Get restaurants with pagination
+curl "http://localhost:5000/restaurants?latitude=37.7749&longitude=-122.4194&page=1&limit=10"
+
+# Get menu items with ratio sorting
+curl "http://localhost:5000/menu-items?latitude=37.7749&longitude=-122.4194&sort_by=protein/fat&sort_order=desc"
+```
+
+---
+
+## 📞 Support
+
+For questions about API integration:
+1. Check the examples in this documentation
+2. Test endpoints with curl commands above  
+3. Review error messages for debugging hints
+4. Open an issue for bugs or feature requests
+
+---
+
+**Built for MacroMaps Frontend Integration** 🗺️
